@@ -27,7 +27,8 @@ async def help(ctx):
     embed.add_field(name="Cave Commands",
                     value="r!CaveTimes (gives the times the cave is open)", inline=False)
     embed.add_field(name="Dining Commands",
-                    value="r!TakeoutTimes (gives the times takeout is open)", inline=False)
+                    value="r!TakeoutTimes (gives the times takeout is open) \n r!DineInTimes (gives the times"
+                          "the dining hall is open)", inline=False)
     embed.add_field(name="Busing Commands",
                     value="r!Busing", inline=False)
     await ctx.send(embed=embed)
