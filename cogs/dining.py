@@ -11,14 +11,14 @@ class Dining(commands.Cog):
     async def TakeoutTimes(self, ctx):
         embed = discord.Embed(title="Takeout Times", description="", color=0xff1300)
 
-        strBreakfastTime = "Breakfast (Mon–Fri): 7 – 11:30 AM \n"
-        strLunchTime = "Lunch (Mon–Fri): 11:30 AM – 4 PM \n"
-        strDinnerTime = "Dinner (Mon–Thurs): 4 PM – midnight \n"
-        strSundayTime = "Sunday: 5:30 PM – 10 PM \n"
+        breakfast_time_str = "Breakfast (Mon–Fri): 7 AM – 11:30 AM \n"
+        lunch_time_str = "Lunch (Mon–Fri): 11:30 AM – 4 PM \n"
+        dinner_time_str = "Dinner (Mon–Thurs): 4 PM – Midnight \n"
+        sunday_time_str = "Sunday: 5:30 PM – 10 PM \n"
 
-        strToSend = strBreakfastTime + strLunchTime + strDinnerTime + strSundayTime
+        str_to_send = breakfast_time_str + lunch_time_str + dinner_time_str + sunday_time_str
 
-        embed.add_field(name="These are the times:", value=strToSend, inline=False)
+        embed.add_field(name="These are the times:", value=str_to_send, inline=False)
         await ctx.send(embed=embed)
 
     @commands.command()
@@ -35,19 +35,19 @@ class Dining(commands.Cog):
         """
         embed = discord.Embed(title="Dining Times", description="", color=0xff1300)
 
-        strWeekdays = "__Weekdays:__ 7:00AM – 9:00PM\n"
-        strWeekBreakfast = "Breakfast: 7:00 – 11:00AM\n"
-        strWeekLunch = "Lunch: 11:00AM – 4:00PM\n"
-        strWeekDinner = "Dinner: 4:00 – 9:00PM\n"
+        weekdays_str = "__Weekdays:__ 7 AM – 9 PM\n"
+        week_breakfast_str = "Breakfast: 7 AM – 11 AM\n"
+        week_lunch_str = "Lunch: 11 AM – 4 PM\n"
+        week_dinner_str = "Dinner: 4 PM – 9 PM\n"
 
-        strWeekends = "__Weekends:__ 9:30AM – 8:00PM\n"
-        strDinnerTime = "Brunch: 9:30AM – 4:00PM\n"
-        strSundayTime = "Dinner: 4:00 – 8:00PM\n"
+        weekends_str = "__Weekends:__ 9:30 AM – 8 PM\n"
+        weekend_brunch_str = "Brunch: 9:30 AM – 4 PM\n"
+        weekend_dinner_str = "Dinner: 4 PM – 8 PM\n"
 
-        strToSend = strWeekdays + strWeekBreakfast + strWeekLunch + strWeekDinner + "\n"
-        strToSend = strToSend + strWeekends + strDinnerTime + strSundayTime
+        str_to_send = weekdays_str + week_breakfast_str + week_lunch_str + week_dinner_str + "\n"
+        str_to_send = str_to_send + weekends_str + weekend_brunch_str + weekend_dinner_str
 
-        embed.add_field(name="These are the times:", value=strToSend, inline=False)
+        embed.add_field(name="These are the times:", value=str_to_send, inline=False)
         await ctx.send(embed=embed)
 
 

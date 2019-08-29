@@ -1,12 +1,12 @@
-import discord
-import sys
-import signal
 import os
+import signal
+import sys
+
+import discord
 from discord.ext import commands
 from discord.ext.commands import ExtensionNotLoaded, ExtensionAlreadyLoaded
 
 import secret
-from discord.ext import commands
 
 TOKEN = secret.secret_token
 client = commands.Bot(command_prefix="r!", case_insensitive=True)
@@ -17,6 +17,7 @@ client.remove_command('help')
 def signal_handler(sig, frame):
     print('Closing bot...')
     sys.exit(0)
+
 
 @client.command()
 async def help(ctx):
@@ -40,7 +41,7 @@ async def load(ctx, extension):
     # to load or unload the cog, this can be changed  once we find a more permanent storage method
     result = False
     user_id = ctx.author.id
-    if user_id == 93121870949281792:
+    if user_id in [93121870949281792, 126420592579706880]:
         result = True
 
     if result is False:
@@ -63,7 +64,7 @@ async def load(ctx, extension):
 async def unload(ctx, extension):
     result = False
     user_id = ctx.author.id
-    if user_id == 93121870949281792:
+    if user_id in [93121870949281792, 126420592579706880]:
         result = True
 
     if result is False:
