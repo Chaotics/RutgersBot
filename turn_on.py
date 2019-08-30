@@ -31,7 +31,10 @@ async def help(ctx):
                     value="r!TakeoutTimes (gives the times takeout is open) \n r!DineInTimes (gives the times"
                           "the dining hall is open)", inline=False)
     embed.add_field(name="Busing Commands",
-                    value="r!Busing", inline=False)
+                    value="r!Routes (gives available routes) \n"
+                          "r!Stops (gives available stops) \n"
+                          "r!BusTime [route] [stop] (gives estimated arrival time) "
+                    , inline=False)
     await ctx.send(embed=embed)
 
 
