@@ -8,7 +8,7 @@ from discord.ext.commands import ExtensionNotLoaded, ExtensionAlreadyLoaded
 
 import secret
 
-TOKEN = secret.secret_token
+TOKEN = secret.LOGIN_TOKEN
 client = commands.Bot(command_prefix="r!", case_insensitive=True)
 client.remove_command('help')
 

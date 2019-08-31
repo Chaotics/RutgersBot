@@ -1,2 +1,5 @@
-# to connect to the bot, put your token in the below quotes!
-secret_token = ""
+# to connect to the bot, put your login token between the quotes below
+LOGIN_TOKEN = ""
+
+# to connect to the TransLoc API, put the Rapid API key between the quotes below
+X_RAPIDAPI_KEY = ""
