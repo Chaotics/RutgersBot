@@ -1,5 +1,6 @@
 from secret import X_RAPIDAPI_KEY
 
+# declares constants necessary to make requests to the API
 API_URL_PROTOCOL = "https://"
 API_HOST = "transloc-api-1-2.p.rapidapi.com/"
 API_KEY = X_RAPIDAPI_KEY
@@ -13,6 +14,8 @@ API_REQUEST_HEADERS = {
 API_REQUEST_PARAMS = {
     "agencies": API_AGENCIES
 }
+
+# the dictionary of mappings from abbreviated campus names to their expanded forms
 CAMPUS_FULL_NAMES = {
     "nb": "New Brunswick",
     "nk": "Newark",
@@ -23,6 +26,7 @@ CAMPUS_FULL_NAMES = {
     "ca": "College Avenue"
 }
 
+# the dictionary of mappings from campus names to their coordinates
 CAMPUS_COORDINATES = {
     "nb": "40.500820,-74.447398|3500.0",
     "nk": "40.741050,-74.173206|1000.0",
@@ -33,11 +37,15 @@ CAMPUS_COORDINATES = {
     "ca": "40.500823,-74.447407|1000.0"
 }
 
+API_DATETIME_FORMAT = "%Y-%m-%dT%H:%M:%S%z"
 
+
+# function to create the API url using the provided endpoint
 def create_api_url(endpoint):
     return API_URL_PROTOCOL + API_HOST + endpoint + "." + API_RESPONSE_FORMAT
 
 
+# function to attach an error to the given embed
 def attach_api_error(embed, err_code, err_type, err_msg):
     embed.add_field(name="**Error (please show this to the server admin)**",
                     value=f"Error Code: {err_code}\nError Type: {err_type}\n"
@@ -45,7 +53,15 @@ def attach_api_error(embed, err_code, err_type, err_msg):
                     inline=False)
 
 
+# function used to append coordinates to the API request using the provided campus
 def append_campus_coords(campus):
     new_params = API_REQUEST_PARAMS.copy()
     new_params["geo_area"] = CAMPUS_COORDINATES[campus]
     return new_params
+
+
+# function to convert a date-time string from the API to one
+# which can be parsed by the Python date-time library
+def convert_api_datetime(datetime_str):
+    split_index = datetime_str.rfind(":")
+    return datetime_str[:split_index] + datetime_str[split_index + 1:]
