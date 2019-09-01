@@ -33,7 +33,7 @@ async def help(ctx):
     embed.add_field(name="Busing Commands",
                     value="r!Routes (gives available routes) \n"
                           "r!Stops (gives available stops) \n"
-                          "r!BusTime [route] [stop] (gives estimated arrival time) "
+                          "r!BusTime [stop] [route] (gives estimated arrival time) "
                     , inline=False)
     await ctx.send(embed=embed)
 

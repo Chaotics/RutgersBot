@@ -1,3 +1,7 @@
+import datetime
+
+import pytz as pytz
+
 from secret import X_RAPIDAPI_KEY
 
 # declares constants necessary to make requests to the API
@@ -53,15 +57,25 @@ def attach_api_error(embed, err_code, err_type, err_msg):
                     inline=False)
 
 
-# function used to append coordinates to the API request using the provided campus
-def append_campus_coords(campus):
+# function used to append coordinates to the API params using the provided campus
+def params_append_coords(campus):
     new_params = API_REQUEST_PARAMS.copy()
     new_params["geo_area"] = CAMPUS_COORDINATES[campus]
     return new_params
 
 
-# function to convert a date-time string from the API to one
+# function that attaches the stop and route id as appropriate
+# parameters to the required request parameters for the API
+def params_append_stop_and_route(stop, route):
+    new_params = API_REQUEST_PARAMS.copy()
+    new_params["stops"] = stop
+    new_params["routes"] = route
+    return new_params
+
+
+# function to convert a datetime string from the API to one
 # which can be parsed by the Python date-time library
 def convert_api_datetime(datetime_str):
     split_index = datetime_str.rfind(":")
-    return datetime_str[:split_index] + datetime_str[split_index + 1:]
+    return datetime.datetime.strptime(datetime_str[:split_index] + datetime_str[split_index + 1:],
+                                      API_DATETIME_FORMAT).astimezone(pytz.utc).replace(tzinfo=None)
