@@ -22,7 +22,10 @@ def signal_handler(sig, frame):
 @client.command()
 async def help(ctx):
     embed = discord.Embed(title="Help", description="A general list of commands provided", color=0xff1300)
-    embed.add_field(name="Basic Commands", value="r!help", inline=False)
+    embed.add_field(name="Basic Commands", value="Do r!help to see this help screen!\n"
+                                                 "For more information about each command simply attempt\n"
+                                                 "to perform the command with no inputs."
+                                                 , inline=False)
     embed.add_field(name="Admin Commands", value="r!load (loads a set of commands) \n r!unload (unloads a set of "
                                                  "commands)", inline=False)
     embed.add_field(name="Cave Commands",
@@ -31,10 +34,11 @@ async def help(ctx):
                     value="r!TakeoutTimes (gives the times takeout is open) \n r!DineInTimes (gives the times"
                           "the dining hall is open)", inline=False)
     embed.add_field(name="Busing Commands",
-                    value="r!Routes (gives available routes) \n"
-                          "r!Stops (gives available stops) \n"
+                    value="r!Routes [school] (gives available routes)\n"
+                          "r!Stops [campus] (gives available stops)\n"
                           "r!BusTime [stop] [route] (gives estimated arrival time) "
                     , inline=False)
+
     await ctx.send(embed=embed)
 
 
@@ -88,7 +92,7 @@ async def unload(ctx, extension):
 
 @client.event
 async def on_ready():
-    await client.change_presence(activity=discord.Game('The Rutgers buses...'))
+    await client.change_presence(activity=discord.Game('the Rutgers buses'))
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)

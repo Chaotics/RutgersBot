@@ -115,17 +115,27 @@ class Busing(commands.Cog):
     # command to retrieve a list of stops for a given campus
     # the default campus (given that no campus is provided), College Avenue is used
     @commands.command()
-    async def Stops(self, ctx, campus="ca"):
-        # creates an embed to output the info fetched from the API
-        embed = discord.Embed(title="Stops", description="", color=0xff1300)
+    async def Stops(self, ctx, campus=None):
 
         # starts by first checking if the campus value provided is valid
         if campus not in Busing._VALID_CAMPUSES_FOR_STOPS:
+            # creates an embed to output the error info
+            embed = discord.Embed(title="Stops", description="", color=0xff1300)
             # if the provided campus is invalid, an error is sent back
-            embed.add_field(name="**ERROR**", value=f"Please provide a correct value for campus. It has to be "
-                                                    f"one of {Busing._VALID_CAMPUSES_FOR_STOPS}",
+            embed.add_field(name="**ERROR**", value=f"Please provide a campus to pull stops from. It has to be "
+                                                    f"one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
+                                                    f"nk = newark stops\n"
+                                                    f"cn = camden stops\n"
+                                                    f"li = livingston stops\n"
+                                                    f"bu = busch stops\n"
+                                                    f"cd = cook douglas stops\n"
+                                                    f"ca = college ave stops",
                             inline=False)
+
         else:
+            # creates an embed to output the info fetched from the API
+            embed = discord.Embed(title="Stops", description="", color=0xff1300)
+
             # otherwise, a request is made to the API to fetch the bus stops, using the url, required headers, and the
             # required and optional parameters
             response = requests.get(url=Busing._STOPS_API_URL, headers=API_REQUEST_HEADERS,
@@ -154,15 +164,19 @@ class Busing(commands.Cog):
     # command to retrieve a list of routes for a given campus
     # the default campus (given that no campus is provided), New Brunswick is used
     @commands.command()
-    async def Routes(self, ctx, campus="nb"):
+    async def Routes(self, ctx, campus=None):
         # first an embed is created to send the routes back to the server
         embed = discord.Embed(title="Routes", description="", color=0xff1300)
 
         # the campus is validated
         if campus not in Busing._VALID_CAMPUSES_FOR_ROUTES:
             # if its invalid, a list of valid campuses to retrieve routes is attached to the embed
-            embed.add_field(name="**ERROR**", value=f"Please provide a correct value for campus. It has to be "
-                                                    f"one of {Busing._VALID_CAMPUSES_FOR_ROUTES}",
+            embed.add_field(name="**ERROR**", value=f"Please provide a school to pull routes from. It has to be "
+                                                    f"one of {Busing._VALID_CAMPUSES_FOR_ROUTES}\n"
+                                                    f"nk = newark routes\n"
+                                                    f"cn = camden routes\n"
+                                                    f"nb = new brunswick routes"
+                            ,
                             inline=False)
         else:
             # otherwise, a request is made to the API to fetch the list of routes for the provided campus
@@ -193,14 +207,25 @@ class Busing(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def BusTime(self, ctx, stop=0, route=0):
+    async def BusTime(self, ctx, stop=-1, route=-1):
         # first an embed is created to convey the arrival estimates back to the server
         embed = discord.Embed(title="Arrival Times", description="", color=0xff1300)
+
+        if (stop < 0 or stop >= len(self._STOPS_INTERNAL_MAPPING)) and (
+                route < 0 or route >= len(self._ROUTES_INTERNAL_MAPPING)):
+            embed = discord.Embed(title="**ERROR**", description="Please provide a correct value for both the stop "
+                                                                 "and route.\n To find the number that represents "
+                                                                 "a specific stop please do r!stops [school]."
+                                                                 "\n To find the number for a specific route do "
+                                                                 "r!routes [campus]."
+                                  , color=0xff1300)
+            await ctx.send(embed=embed)
+            return
 
         # validates that the stop internal ID provided is within the bot's recognized bounds
         if stop < 0 or stop >= len(self._STOPS_INTERNAL_MAPPING):
             embed.add_field(name="**ERROR**", value=f"Please provide a correct value for the stop. It has to be a "
-                                                    f"number in 0-{len(self._STOPS_INTERNAL_MAPPING) - 1} (inclusive)",
+                                                    f"number between 0-{len(self._STOPS_INTERNAL_MAPPING) - 1} (inclusive)",
                             inline=False)
             await ctx.send(embed=embed)
             return
