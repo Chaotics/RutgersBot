@@ -192,31 +192,41 @@ class Busing(commands.Cog):
                                                     f"nk = Newark\n"
                                                     f"cn = Camden\n"
                                                     f"nb = New Brunswick", inline=False)
-        else:
-            # otherwise, a request is made to the API to fetch the list of routes for the provided campus
+            # finally, the embed is sent back to the server
+            await ctx.send(embed=embed)
+            return
+
+        if campus not in self.cache["routes"]:
+            self.cache["routes"][campus] = {}
+        cached_resource = self.cache["routes"][campus]
+        should_request = is_data_stale(cached_resource)
+        route_names = ""
+        if should_request:
+            # a request is made to the API to fetch the list of routes for the provided campus
             response = requests.get(url=Busing._ROUTES_API_URL, headers=API_REQUEST_HEADERS,
                                     params=params_append_coords(campus))
-
             # the response status code is checked to verify if the request was successful
             if response.status_code == requests.codes.ok:
+                json_response = response.json()
                 # if the request was successful, the relevant data from the response is extracted
                 # the data is further filtered to only include the active one"s
                 route_names = "\n".join(
                     [("[" + Busing._ROUTES_ID_MAPPING[route_info["route_id"]] + "] " + route_info["long_name"]) for
-                     route_info in response.json()["data"][API_AGENCIES] if
+                     route_info in json_response["data"][API_AGENCIES] if
                      route_info["is_active"]])
-
                 # if the returned list of routes is empty, an appropriate message is conveyed
                 if not route_names:
                     route_names = "No routes currently active on this campus"
-
-                # next, the relevant data is attached to the embed in order to send it to the server
-                embed.add_field(name=CAMPUS_FULL_NAMES[campus] + " Routes: ", value=route_names,
-                                inline=False)
+                self.cache_data(cached_resource, json_response, route_names)
             else:
                 # otherwise, if the request failed, error is attached to the embed instead
                 attach_api_error(embed=embed, err_code=response.status_code, err_type=response.reason,
                                  err_msg=response.text)
+        else:
+            route_names = cached_resource["data"]
+        # the relevant data is attached to the embed in order to send it to the server
+        embed.add_field(name=CAMPUS_FULL_NAMES[campus] + " Routes: ", value=route_names,
+                        inline=False)
         # finally, the embed is sent back to the server
         await ctx.send(embed=embed)
 
