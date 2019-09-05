@@ -1,12 +1,11 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import discord
 import requests
 from discord.ext import commands
 
-from api_utils import create_api_url, params_append_coords, API_REQUEST_HEADERS, \
-    API_AGENCIES, CAMPUS_FULL_NAMES, \
-    attach_api_error, params_append_stop_and_route, convert_api_datetime
+from api_utils import create_api_url, params_append_coords, API_REQUEST_HEADERS, API_AGENCIES, CAMPUS_FULL_NAMES, \
+    attach_api_error, params_append_stop_and_route, convert_api_datetime, is_data_stale
 from turn_on import COMMAND_PREFIX
 
 
@@ -112,51 +111,68 @@ class Busing(commands.Cog):
 
     def __init__(self, client):
         self.client = client
+        self.cache = {"stops": {}, "routes": {}, "bustimes": {}}
+
+    @staticmethod
+    def cache_data(cached_resource, json_response, data_str, expires_in=0):
+        expire_datetime = convert_api_datetime(json_response["generated_on"]) + timedelta(
+            seconds=json_response["rate_limit"]) + (
+                              timedelta(seconds=expires_in) if expires_in > 0 else timedelta(
+                                  seconds=json_response["expires_in"]))
+        cached_resource["expire_datetime"] = expire_datetime
+        cached_resource["data"] = data_str
 
     # command to retrieve a list of stops for a given campus
     # the default campus (given that no campus is provided), College Avenue is used
     @commands.command()
     async def Stops(self, ctx, campus=None):
-
+        # creates an embed to output the relevant info
+        embed = discord.Embed(title="Stops", description="", color=0xff1300)
         # starts by first checking if the campus value provided is valid
         if campus not in Busing._VALID_CAMPUSES_FOR_STOPS:
-            # creates an embed to output the error info
-            embed = discord.Embed(title="Stops", description="", color=0xff1300)
             # if the provided campus is invalid, an error is sent back
             embed.add_field(name="**ERROR**", value=f"Please provide a campus to pull stops from. It has to be "
-                                                    "one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
+                                                    f"one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
                                                     "nk = Newark\n"
                                                     "cn = Camden\n"
                                                     "li = Livingston\n"
                                                     "bu = Busch\n"
                                                     "cd = Cook\\Douglass\n"
                                                     "ca = College Avenue", inline=False)
+            await ctx.send(embed=embed)
+            return
 
-        else:
-            # creates an embed to output the info fetched from the API
-            embed = discord.Embed(title="Stops", description="", color=0xff1300)
-
-            # otherwise, a request is made to the API to fetch the bus stops, using the url, required headers, and the
-            # required and optional parameters
+        if campus not in self.cache["stops"]:
+            self.cache["stops"][campus] = {}
+        cached_resource = self.cache["stops"][campus]
+        should_request = is_data_stale(cached_resource)
+        stop_names = ""
+        if should_request:
+            # otherwise, a request is made to the API to fetch the bus stops, using the url, required headers,
+            # and the required and optional parameters
             response = requests.get(url=Busing._STOPS_API_URL, headers=API_REQUEST_HEADERS,
                                     params=params_append_coords(campus))
-
             # once the response comes back from the API, the status_code is checked to see if it was successful
             if response.status_code == requests.codes.ok:
+                json_response = response.json()
                 # if the request was successful, the data is parsed to filter only the name field, and then
                 # all the stops are concatenated using a new line character to be set into the embed
                 stop_names = "\n".join(
-                    [("[" + Busing._STOPS_ID_MAPPING[stop_info["stop_id"]] + "] " + stop_info["name"]) for stop_info in
-                     response.json()["data"]])
-
-                # first, title is chosen by expanding the campus abbreviation string and the value is set to
-                # be the string representing the bus stop names
-                embed.add_field(name=CAMPUS_FULL_NAMES[campus] + " Stops: ", value=stop_names,
-                                inline=False)
+                    [("[" + Busing._STOPS_ID_MAPPING[stop_info["stop_id"]] + "] " + stop_info["name"]) for stop_info
+                     in
+                     json_response["data"]])
+                self.cache_data(cached_resource, json_response, stop_names)
             else:
                 # if the request was unsuccessful, an error is attached to the embed instead
                 attach_api_error(embed=embed, err_code=response.status_code, err_type=response.reason,
                                  err_msg=response.text)
+                await ctx.send(embed=embed)
+                return
+        else:
+            stop_names = cached_resource["data"]
+        # first, title is chosen by expanding the campus abbreviation string and the value is set to
+        # be the string representing the bus stop names
+        embed.add_field(name=CAMPUS_FULL_NAMES[campus] + " Stops: ", value=stop_names, inline=False)
 
         # finally the embed is sent to the server
         await ctx.send(embed=embed)

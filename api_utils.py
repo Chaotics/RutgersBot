@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 import pytz as pytz
 
@@ -77,5 +77,12 @@ def params_append_stop_and_route(stop, route):
 # which can be parsed by the Python date-time library
 def convert_api_datetime(datetime_str):
     split_index = datetime_str.rfind(":")
-    return datetime.datetime.strptime(datetime_str[:split_index] + datetime_str[split_index + 1:],
-                                      API_DATETIME_FORMAT).astimezone(pytz.utc).replace(tzinfo=None)
+    return datetime.strptime(datetime_str[:split_index] + datetime_str[split_index + 1:],
+                             API_DATETIME_FORMAT).astimezone(pytz.utc).replace(tzinfo=None)
+
+
+def is_data_stale(cached_resource):
+    if cached_resource:
+        return datetime.utcnow() > cached_resource["expire_datetime"]
+    else:
+        return True
