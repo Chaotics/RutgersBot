@@ -7,6 +7,7 @@ from discord.ext import commands
 from api_utils import create_api_url, params_append_coords, API_REQUEST_HEADERS, \
     API_AGENCIES, CAMPUS_FULL_NAMES, \
     attach_api_error, params_append_stop_and_route, convert_api_datetime
+from turn_on import COMMAND_PREFIX
 
 
 class Busing(commands.Cog):
@@ -123,14 +124,13 @@ class Busing(commands.Cog):
             embed = discord.Embed(title="Stops", description="", color=0xff1300)
             # if the provided campus is invalid, an error is sent back
             embed.add_field(name="**ERROR**", value=f"Please provide a campus to pull stops from. It has to be "
-                                                    f"one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
-                                                    f"nk = newark stops\n"
-                                                    f"cn = camden stops\n"
-                                                    f"li = livingston stops\n"
-                                                    f"bu = busch stops\n"
-                                                    f"cd = cook douglas stops\n"
-                                                    f"ca = college ave stops",
-                            inline=False)
+                                                    "one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
+                                                    "nk = Newark\n"
+                                                    "cn = Camden\n"
+                                                    "li = Livingston\n"
+                                                    "bu = Busch\n"
+                                                    "cd = Cook\\Douglass\n"
+                                                    "ca = College Avenue", inline=False)
 
         else:
             # creates an embed to output the info fetched from the API
@@ -173,11 +173,9 @@ class Busing(commands.Cog):
             # if its invalid, a list of valid campuses to retrieve routes is attached to the embed
             embed.add_field(name="**ERROR**", value=f"Please provide a school to pull routes from. It has to be "
                                                     f"one of {Busing._VALID_CAMPUSES_FOR_ROUTES}\n"
-                                                    f"nk = newark routes\n"
-                                                    f"cn = camden routes\n"
-                                                    f"nb = new brunswick routes"
-                            ,
-                            inline=False)
+                                                    f"nk = Newark\n"
+                                                    f"cn = Camden\n"
+                                                    f"nb = New Brunswick", inline=False)
         else:
             # otherwise, a request is made to the API to fetch the list of routes for the provided campus
             response = requests.get(url=Busing._ROUTES_API_URL, headers=API_REQUEST_HEADERS,
@@ -211,28 +209,21 @@ class Busing(commands.Cog):
         # first an embed is created to convey the arrival estimates back to the server
         embed = discord.Embed(title="Arrival Times", description="", color=0xff1300)
 
-        if (stop < 0 or stop >= len(self._STOPS_INTERNAL_MAPPING)) and (
-                route < 0 or route >= len(self._ROUTES_INTERNAL_MAPPING)):
-            embed = discord.Embed(title="**ERROR**", description="Please provide a correct value for both the stop "
-                                                                 "and route.\n To find the number that represents "
-                                                                 "a specific stop please do r!stops [school]."
-                                                                 "\n To find the number for a specific route do "
-                                                                 "r!routes [campus]."
-                                  , color=0xff1300)
-            await ctx.send(embed=embed)
-            return
-
         # validates that the stop internal ID provided is within the bot's recognized bounds
         if stop < 0 or stop >= len(self._STOPS_INTERNAL_MAPPING):
             embed.add_field(name="**ERROR**", value=f"Please provide a correct value for the stop. It has to be a "
-                                                    f"number between 0-{len(self._STOPS_INTERNAL_MAPPING) - 1} (inclusive)",
+                                                    f"number between 0-{len(self._STOPS_INTERNAL_MAPPING) - 1} "
+                                                    f"(inclusive) \n To find the number that represents a specific stop"
+                                                    f" please do {COMMAND_PREFIX}stops [school]",
                             inline=False)
             await ctx.send(embed=embed)
             return
         # validates that the route internal ID provided is within the bot's recognized bounds
         if route < 0 or route >= len(self._ROUTES_INTERNAL_MAPPING):
             embed.add_field(name="**ERROR**", value=f"Please provide a correct value for the route. It has to be a "
-                                                    f"number in 0-{len(self._ROUTES_INTERNAL_MAPPING) - 1} (inclusive)",
+                                                    f"number in 0-{len(self._ROUTES_INTERNAL_MAPPING) - 1} (inclusive) "
+                                                    f"\n To find the number for a specific route do {COMMAND_PREFIX}"
+                                                    f"routes [campus]",
                             inline=False)
             await ctx.send(embed=embed)
             return
