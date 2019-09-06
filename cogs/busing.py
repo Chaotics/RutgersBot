@@ -120,7 +120,7 @@ class Busing(commands.Cog):
                               timedelta(seconds=expires_in) if expires_in > 0 else timedelta(
                                   seconds=json_response["expires_in"]))
         cached_resource["expire_datetime"] = expire_datetime
-        cached_resource["data"] = data_str
+        cached_resource["data"] = data_str + "[FROM CACHE]"
 
     # command to retrieve a list of stops for a given campus
     # the default campus (given that no campus is provided), College Avenue is used
@@ -222,6 +222,8 @@ class Busing(commands.Cog):
                 # otherwise, if the request failed, error is attached to the embed instead
                 attach_api_error(embed=embed, err_code=response.status_code, err_type=response.reason,
                                  err_msg=response.text)
+                await ctx.send(embed=embed)
+                return
         else:
             route_names = cached_resource["data"]
         # the relevant data is attached to the embed in order to send it to the server
@@ -253,45 +255,58 @@ class Busing(commands.Cog):
                             inline=False)
             await ctx.send(embed=embed)
             return
+
+        search_str = f"{stop}{route}"
+        if search_str not in self.cache["bustimes"]:
+            self.cache["bustimes"][search_str] = {}
+        cached_resource = self.cache["bustimes"][search_str]
+        should_request = is_data_stale(cached_resource)
+        times_str = ""
         # fetches the relevant data to make the request from application pre-defined mappings
         stop_data = Busing._STOPS_INTERNAL_MAPPING[stop]
         stop_id = stop_data[0]
+        stop_name = stop_data[1]
         route_data = Busing._ROUTES_INTERNAL_MAPPING[route]
         route_id = route_data[0]
+        route_name = route_data[1]
+        if should_request:
+            # makes a request to fetch the arrival estimates for the given route and stop
+            response = requests.get(url=Busing._ARRIVAL_ESTIMATES_API_URL, headers=API_REQUEST_HEADERS,
+                                    params=params_append_stop_and_route(str(stop_id), str(route_id)))
 
-        # makes a request to fetch the arrival estimates for the given route and stop
-        response = requests.get(url=Busing._ARRIVAL_ESTIMATES_API_URL, headers=API_REQUEST_HEADERS,
-                                params=params_append_stop_and_route(str(stop_id), str(route_id)))
-
-        # checks the status code to determine if the request was successful
-        if response.status_code == requests.codes.ok:
-            # if its successful, the data is parsed as JSON and extracted
-            stop_name = stop_data[1]
-            route_name = route_data[1]
-            response_data = response.json()["data"]
-            times_str = ""
-            # if the returned data is empty, then it must be that no buses are set to arrive there
-            if not response_data:
-                times_str = f"Currently there are no buses set to arrive here"
+            # checks the status code to determine if the request was successful
+            if response.status_code == requests.codes.ok:
+                json_response = response.json()
+                response_data = json_response["data"]
+                # if the returned data is empty, then it must be that no buses are set to arrive there
+                if not response_data:
+                    times_str = f"Currently there are no buses set to arrive here"
+                else:
+                    # the arrival times from the JSON parsed data is extracted
+                    arrival_times = response_data[0]["arrivals"]
+                    # for every arrival time, the time difference is calculated
+                    for time_info in arrival_times:
+                        # first the datetime string from the API is parsed into Python datetime
+                        time = convert_api_datetime(time_info["arrival_at"])
+                        # then the difference is calculated from the current time in seconds
+                        time_diff = (time - datetime.utcnow()).seconds
+                        # the time string to be sent back is either converted to minutes or seconds depending
+                        # on the time difference calculated
+                        times_str += ((str(round(time_diff)) + " seconds") if time_diff < 60 else (
+                                str(round(time_diff / 60)) + " minutes")) + "\n"
+                self.cache_data(cached_resource, json_response, times_str, 30)
             else:
-                # the arrival times from the JSON parsed data is extracted
-                arrival_times = response_data[0]["arrivals"]
-                # for every arrival time, the time difference is calculated
-                for time_info in arrival_times:
-                    # first the datetime string from the API is parsed into Python datetime
-                    time = convert_api_datetime(time_info["arrival_at"])
-                    # then the difference is calculated from the current time in seconds
-                    time_diff = (time - datetime.utcnow()).seconds
-                    # the time string to be sent back is either converted to minutes or seconds depending
-                    # on the time difference calculated
-                    times_str += ((str(round(time_diff)) + " seconds") if time_diff < 60 else (
-                            str(round(time_diff / 60)) + " minutes")) + "\n"
-            # all the arrival times are finally added as a field value
-            embed.add_field(name=f"'{route_name}' buses arriving at {stop_name} in: ", value=times_str, inline=False)
+                # otherwise, if the request failed, error is attached to the embed instead
+                attach_api_error(embed=embed, err_code=response.status_code, err_type=response.reason,
+                                 err_msg=response.text)
+                await ctx.send(embed=embed)
+                return
         else:
-            # otherwise, if the request failed, error is attached to the embed instead
-            attach_api_error(embed=embed, err_code=response.status_code, err_type=response.reason,
-                             err_msg=response.text)
+            times_str = cached_resource["data"]
+
+        # all the arrival times are finally added as a field value
+        embed.add_field(name=f"'{route_name}' buses arriving at {stop_name} in: ", value=times_str,
+                        inline=False)
         # the embed created with the relevant data is sent back to the server
         await ctx.send(embed=embed)
 
