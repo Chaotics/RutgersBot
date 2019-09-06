@@ -18,7 +18,7 @@ class Busing(commands.Cog):
 
     # represents the valid values for the campus field for the stops and routes command
     _VALID_CAMPUSES_FOR_STOPS = [stop_name for stop_name in CAMPUS_FULL_NAMES.keys() if stop_name != "nb"]
-    _VALID_CAMPUSES_FOR_ROUTES = ["nb", "nk", "cn"]
+    _VALID_CAMPUSES_FOR_ROUTES = ["nb", "nk", "cm"]
 
     # represents the mapping of a unique index to unique stop and route ID's and their names
     _STOPS_INTERNAL_MAPPING = [("4229492", "College Avenue Student Center"),
@@ -120,7 +120,7 @@ class Busing(commands.Cog):
                               timedelta(seconds=expires_in) if expires_in > 0 else timedelta(
                                   seconds=json_response["expires_in"]))
         cached_resource["expire_datetime"] = expire_datetime
-        cached_resource["data"] = data_str + "[FROM CACHE]"
+        cached_resource["data"] = data_str
 
     # command to retrieve a list of stops for a given campus
     # the default campus (given that no campus is provided), College Avenue is used
@@ -134,7 +134,7 @@ class Busing(commands.Cog):
             embed.add_field(name="**ERROR**", value=f"Please provide a campus to pull stops from. It has to be "
                                                     f"one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
                                                     "nk = Newark\n"
-                                                    "cn = Camden\n"
+                                                    "cm = Camden\n"
                                                     "li = Livingston\n"
                                                     "bu = Busch\n"
                                                     "cd = Cook\\Douglass\n"
@@ -187,11 +187,11 @@ class Busing(commands.Cog):
         # the campus is validated
         if campus not in Busing._VALID_CAMPUSES_FOR_ROUTES:
             # if its invalid, a list of valid campuses to retrieve routes is attached to the embed
-            embed.add_field(name="**ERROR**", value=f"Please provide a school to pull routes from. It has to be "
+            embed.add_field(name="**ERROR**", value="Please provide a school to pull routes from. It has to be "
                                                     f"one of {Busing._VALID_CAMPUSES_FOR_ROUTES}\n"
-                                                    f"nk = Newark\n"
-                                                    f"cn = Camden\n"
-                                                    f"nb = New Brunswick", inline=False)
+                                                    "nk = Newark\n"
+                                                    "cm = Camden\n"
+                                                    "nb = New Brunswick", inline=False)
             # finally, the embed is sent back to the server
             await ctx.send(embed=embed)
             return

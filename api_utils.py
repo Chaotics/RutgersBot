@@ -23,7 +23,7 @@ API_REQUEST_PARAMS = {
 CAMPUS_FULL_NAMES = {
     "nb": "New Brunswick",
     "nk": "Newark",
-    "cn": "Camden",
+    "cm": "Camden",
     "li": "Livingston",
     "bu": "Busch",
     "cd": "Cook/Douglass",
@@ -34,7 +34,7 @@ CAMPUS_FULL_NAMES = {
 CAMPUS_COORDINATES = {
     "nb": "40.500820,-74.447398|3500.0",
     "nk": "40.741050,-74.173206|1000.0",
-    "cn": "39.948508,-75.122122|1000.0",
+    "cm": "39.948508,-75.122122|1000.0",
     "li": "40.524199,-74.435495|800.0",
     "bu": "40.521196,-74.462281|800.0",
     "cd": "40.521196,-74.462281|1500.0",
