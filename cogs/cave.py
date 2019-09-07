@@ -8,7 +8,7 @@ class Cave(commands.Cog):
         self.client = client
 
     @commands.command()
-    async def CaveTimes(self, ctx):
+    async def Cave(self, ctx):
         embed = discord.Embed(title="Cave Times", description="", color=0xff1300)
         mon_time_str = "Monday: 1PM - 11PM\n"
         tues_time_str = " Tuesday: 1PM - 11PM\n"

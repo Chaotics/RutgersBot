@@ -8,7 +8,7 @@ class Dining(commands.Cog):
         self.client = client
 
     @commands.command()
-    async def TakeoutTimes(self, ctx):
+    async def Takeout(self, ctx):
         embed = discord.Embed(title="Takeout Times", description="", color=0xff1300)
 
         breakfast_time_str = "Breakfast (Mon–Fri): 7 AM – 11:30 AM \n"
@@ -22,7 +22,7 @@ class Dining(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def DineInTimes(self, ctx):
+    async def DineIn(self, ctx):
         """
         Weekdays: 7:00AM – 9:00PM
         Breakfast: 7:00 – 11:00AM

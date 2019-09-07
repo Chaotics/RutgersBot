@@ -29,14 +29,14 @@ async def help(ctx):
     embed.add_field(name="Admin Commands", value="r!load (loads a set of commands) \n r!unload (unloads a set of "
                                                  "commands)", inline=False)
     embed.add_field(name="Cave Commands",
-                    value="r!CaveTimes (gives the times the cave is open)", inline=False)
+                    value="r!Cave (gives the times the cave is open)", inline=False)
     embed.add_field(name="Dining Commands",
-                    value="r!TakeoutTimes (gives the times takeout is open) \n r!DineInTimes (gives the times"
+                    value="r!Takeout (gives the times takeout is open) \n r!DineIn (gives the times"
                           "the dining hall is open)", inline=False)
     embed.add_field(name="Busing Commands",
                     value="r!Routes [school] (gives available routes)\n"
                           "r!Stops [campus] (gives available stops)\n"
-                          "r!BusTime [stop] [route] (gives estimated arrival time) "
+                          "r!Bus [stop] [route] (gives estimated arrival time) "
                     , inline=False)
 
     await ctx.send(embed=embed)

@@ -207,7 +207,7 @@ class Busing(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command()
-    async def BusTime(self, ctx, stop=-1, route=-1):
+    async def Bus(self, ctx, stop=-1, route=-1):
         # first an embed is created to convey the arrival estimates back to the server
         embed = discord.Embed(title="Arrival Times", description="", color=0xff1300)
 
