@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 
 import pytz as pytz
 
@@ -23,7 +23,7 @@ API_REQUEST_PARAMS = {
 CAMPUS_FULL_NAMES = {
     "nb": "New Brunswick",
     "nk": "Newark",
-    "cn": "Camden",
+    "cm": "Camden",
     "li": "Livingston",
     "bu": "Busch",
     "cd": "Cook/Douglass",
@@ -34,7 +34,7 @@ CAMPUS_FULL_NAMES = {
 CAMPUS_COORDINATES = {
     "nb": "40.500820,-74.447398|3500.0",
     "nk": "40.741050,-74.173206|1000.0",
-    "cn": "39.948508,-75.122122|1000.0",
+    "cm": "39.948508,-75.122122|1000.0",
     "li": "40.524199,-74.435495|800.0",
     "bu": "40.521196,-74.462281|800.0",
     "cd": "40.521196,-74.462281|1500.0",
@@ -77,5 +77,12 @@ def params_append_stop_and_route(stop, route):
 # which can be parsed by the Python date-time library
 def convert_api_datetime(datetime_str):
     split_index = datetime_str.rfind(":")
-    return datetime.datetime.strptime(datetime_str[:split_index] + datetime_str[split_index + 1:],
-                                      API_DATETIME_FORMAT).astimezone(pytz.utc).replace(tzinfo=None)
+    return datetime.strptime(datetime_str[:split_index] + datetime_str[split_index + 1:],
+                             API_DATETIME_FORMAT).astimezone(pytz.utc).replace(tzinfo=None)
+
+
+def is_data_stale(cached_resource):
+    if cached_resource:
+        return datetime.utcnow() > cached_resource["expire_datetime"]
+    else:
+        return True

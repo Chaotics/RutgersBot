@@ -9,7 +9,8 @@ from discord.ext.commands import ExtensionNotLoaded, ExtensionAlreadyLoaded
 import secret
 
 TOKEN = secret.LOGIN_TOKEN
-client = commands.Bot(command_prefix="r!", case_insensitive=True)
+COMMAND_PREFIX = "r!"
+client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
 client.remove_command('help')
 
 
@@ -22,21 +23,22 @@ def signal_handler(sig, frame):
 @client.command()
 async def help(ctx):
     embed = discord.Embed(title="Help", description="A general list of commands provided", color=0xff1300)
-    embed.add_field(name="Basic Commands", value="Do r!help to see this help screen!\n"
+    embed.add_field(name="Basic Commands", value=f"Do {COMMAND_PREFIX}help to see this help screen!\n"
                                                  "For more information about each command simply attempt\n"
                                                  "to perform the command with no inputs."
-                                                 , inline=False)
-    embed.add_field(name="Admin Commands", value="r!load (loads a set of commands) \n r!unload (unloads a set of "
-                                                 "commands)", inline=False)
+                    , inline=False)
+    embed.add_field(name="Admin Commands",
+                    value=f"{COMMAND_PREFIX}load (loads a set of commands) \n {COMMAND_PREFIX}unload (unloads a set of "
+                          "commands)", inline=False)
     embed.add_field(name="Cave Commands",
-                    value="r!Cave (gives the times the cave is open)", inline=False)
+                    value=f"{COMMAND_PREFIX}CaveTimes (gives the times the cave is open)", inline=False)
     embed.add_field(name="Dining Commands",
-                    value="r!Takeout (gives the times takeout is open) \n r!DineIn (gives the times"
-                          "the dining hall is open)", inline=False)
+                    value=f"{COMMAND_PREFIX}TakeoutTimes (gives the times takeout is open) \n {COMMAND_PREFIX}DineInTimes (gives "
+                          "the times the dining hall is open)", inline=False)
     embed.add_field(name="Busing Commands",
-                    value="r!Routes [school] (gives available routes)\n"
-                          "r!Stops [campus] (gives available stops)\n"
-                          "r!Bus [stop] [route] (gives estimated arrival time) "
+                    value=f"{COMMAND_PREFIX}Routes [school] (gives available routes)\n"
+                          f"{COMMAND_PREFIX}Stops [campus] (gives available stops)\n"
+                          f"{COMMAND_PREFIX}BusTime [stop] [route] (gives estimated arrival time) "
                     , inline=False)
 
     await ctx.send(embed=embed)
