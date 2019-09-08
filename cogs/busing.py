@@ -6,6 +6,7 @@ from discord.ext import commands
 
 from api_utils import create_api_url, params_append_coords, API_REQUEST_HEADERS, API_AGENCIES, CAMPUS_FULL_NAMES, \
     attach_api_error, params_append_stop_and_route, convert_api_datetime, is_data_stale
+from data_utils import find_by_api_id, BusingDataType
 from turn_on import COMMAND_PREFIX
 
 
@@ -155,12 +156,13 @@ class Busing(commands.Cog):
             # once the response comes back from the API, the status_code is checked to see if it was successful
             if response.status_code == requests.codes.ok:
                 json_response = response.json()
+                stop_list = []
+                for stop_info in json_response["data"]:
+                    stop_data = find_by_api_id(BusingDataType.STOP, int(stop_info["stop_id"]))
+                    stop_list.append(str(stop_data))
                 # if the request was successful, the data is parsed to filter only the name field, and then
                 # all the stops are concatenated using a new line character to be set into the embed
-                stop_names = "\n".join(
-                    [("[" + Busing._STOPS_ID_MAPPING[stop_info["stop_id"]] + "] " + stop_info["name"]) for stop_info
-                     in
-                     json_response["data"]])
+                stop_names = "\n".join(stop_list)
                 self.cache_data(cached_resource, json_response, stop_names)
             else:
                 # if the request was unsuccessful, an error is attached to the embed instead
@@ -208,12 +210,15 @@ class Busing(commands.Cog):
             # the response status code is checked to verify if the request was successful
             if response.status_code == requests.codes.ok:
                 json_response = response.json()
+                route_list = []
+                for route_info in json_response["data"][API_AGENCIES]:
+                    if not route_info["is_active"]:
+                        continue
+                    route_data = find_by_api_id(BusingDataType.ROUTE, int(route_info["route_id"]))
+                    route_list.append(str(route_data))
                 # if the request was successful, the relevant data from the response is extracted
                 # the data is further filtered to only include the active one"s
-                route_names = "\n".join(
-                    [("[" + Busing._ROUTES_ID_MAPPING[route_info["route_id"]] + "] " + route_info["long_name"]) for
-                     route_info in json_response["data"][API_AGENCIES] if
-                     route_info["is_active"]])
+                route_names = "\n".join(route_list)
                 # if the returned list of routes is empty, an appropriate message is conveyed
                 if not route_names:
                     route_names = "No routes currently active on this campus"
