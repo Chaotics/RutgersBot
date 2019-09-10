@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from datetime import datetime
 
 
 class Dining(commands.Cog):
@@ -9,14 +10,30 @@ class Dining(commands.Cog):
 
     @commands.command()
     async def Takeout(self, ctx):
-        embed = discord.Embed(title="Takeout Times", description="", color=0xff1300)
+        embed = discord.Embed(title="Takeout Times", color=0xff1300, description="")
+        currentDT = datetime.today().strftime('%A')
 
-        breakfast_time_str = "Breakfast (Mon–Fri): 7 AM – 11:30 AM \n"
-        lunch_time_str = "Lunch (Mon–Fri): 11:30 AM – 4 PM \n"
-        dinner_time_str = "Dinner (Mon–Thurs): 4 PM – Midnight \n"
-        sunday_time_str = "Sunday: 5:30 PM – 10 PM \n"
+        breakfast_time_str = "Breakfast: 7 AM – 11:30 AM \n"
+        lunch_time_str = "Lunch: 11:30 AM – 4 PM \n"
+        dinner_time_str = "Dinner: 4 PM – Midnight \n"
+        str_to_send = breakfast_time_str + lunch_time_str
 
-        str_to_send = breakfast_time_str + lunch_time_str + dinner_time_str + sunday_time_str
+        if currentDT == "Monday":
+            str_to_send += dinner_time_str
+        elif currentDT == "Tuesday":
+            str_to_send += dinner_time_str
+        elif currentDT == "Wednesday":
+            str_to_send += dinner_time_str
+        elif currentDT == "Thursday":
+            str_to_send += dinner_time_str
+        elif currentDT == "Friday":
+            pass
+        elif currentDT == "Saturday":
+            str_to_send = "Saturday: Closed\n"
+        else:
+            str_to_send = "Sunday: 5:30 PM – 10 PM \n"
+
+        # str_to_send = breakfast_time_str + lunch_time_str + dinner_time_str + sunday_time_str
 
         embed.add_field(name="These are the times:", value=str_to_send, inline=False)
         await ctx.send(embed=embed)
@@ -35,17 +52,20 @@ class Dining(commands.Cog):
         """
         embed = discord.Embed(title="Dining Times", description="", color=0xff1300)
 
-        weekdays_str = "__Weekdays:__ 7 AM – 9 PM\n"
+        currentDT = datetime.today().strftime('%A')
         week_breakfast_str = "Breakfast: 7 AM – 11 AM\n"
         week_lunch_str = "Lunch: 11 AM – 4 PM\n"
         week_dinner_str = "Dinner: 4 PM – 9 PM\n"
 
-        weekends_str = "__Weekends:__ 9:30 AM – 8 PM\n"
         weekend_brunch_str = "Brunch: 9:30 AM – 4 PM\n"
         weekend_dinner_str = "Dinner: 4 PM – 8 PM\n"
 
-        str_to_send = weekdays_str + week_breakfast_str + week_lunch_str + week_dinner_str + "\n"
-        str_to_send = str_to_send + weekends_str + weekend_brunch_str + weekend_dinner_str
+        if currentDT == "Saturday":
+            str_to_send = weekend_brunch_str + weekend_dinner_str
+        elif currentDT == "Sunday":
+            str_to_send = weekend_brunch_str + weekend_dinner_str
+        else:
+            str_to_send = week_breakfast_str + week_lunch_str + week_dinner_str
 
         embed.add_field(name="These are the times:", value=str_to_send, inline=False)
         await ctx.send(embed=embed)
