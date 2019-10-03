@@ -27,8 +27,8 @@ class Cave(commands.Cog):
         else:
             str_to_send = " Sunday: 3PM - 11PM\n"
 
-        #old string to send
-        #str_to_send = mon_time_str + tues_time_str + wed_time_str + thurs_time_str + fri_time_str + sat_time_str + sun_time_str
+        # old string to send str_to_send = mon_time_str + tues_time_str + wed_time_str + thurs_time_str +
+        # fri_time_str + sat_time_str + sun_time_str
 
         embed.add_field(name="The hours for today are:", value=str_to_send, inline=False)
         await ctx.send(embed=embed)

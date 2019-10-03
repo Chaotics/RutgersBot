@@ -70,7 +70,6 @@ class Dining(commands.Cog):
         embed.add_field(name="These are the times:", value=str_to_send, inline=False)
         await ctx.send(embed=embed)
 
-
 def setup(client):
     client.add_cog(Dining(client))
     return

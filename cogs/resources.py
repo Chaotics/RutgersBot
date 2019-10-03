@@ -25,7 +25,7 @@ class Resources(commands.Cog):
         desc += '\n[Auride\'s Minimum Spanning Tree Tester](https://dshepsis.github.io/MSTGenerator/)'
 
         embed = discord.Embed(
-            title = 'CS214 Resources',
+            title = 'C112 Resources',
             description = desc
         )
 
@@ -33,7 +33,7 @@ class Resources(commands.Cog):
 
     @commands.command()
     async def cs214(self, ctx):
-        desc = '[Qasim\'s Systems Programming Guide](http://qasimabbas.github.io/2016-10-31-systems-notes/'
+        desc = '[Qasim\'s Systems Programming Guide](http://qasimabbas.github.io/2016-10-31-systems-notes)'
 
         embed = discord.Embed(
             title = 'CS214 Resources',

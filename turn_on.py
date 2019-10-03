@@ -40,6 +40,11 @@ async def help(ctx):
                           f"{COMMAND_PREFIX}Stops [campus] (gives available stops)\n"
                           f"{COMMAND_PREFIX}Bus [stop] [route] (gives estimated arrival time) "
                     , inline=False)
+    embed.add_field(name="Resources",
+                    value="If available, do r!coursename to get useful course resources.\n"
+                          f"Currently only {COMMAND_PREFIX}cs111, {COMMAND_PREFIX}cs112 and {COMMAND_PREFIX}cs214 "
+                          f"are available."
+                    , inline=False)
 
     await ctx.send(embed=embed)
 
