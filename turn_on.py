@@ -61,7 +61,7 @@ async def load(ctx, extension):
     # to load or unload the cog, this can be changed  once we find a more permanent storage method
     result = False
     user_id = ctx.author.id
-    if isBotAdmin(user_id):
+    if is_bot_admin(user_id):
         result = True
 
     if result is False:
@@ -84,7 +84,7 @@ async def load(ctx, extension):
 async def unload(ctx, extension):
     result = False
     user_id = ctx.author.id
-    if isBotAdmin(user_id):
+    if is_bot_admin(user_id):
         result = True
 
     if result is False:
@@ -104,7 +104,7 @@ async def unload(ctx, extension):
 
 @client.command()
 async def reload(ctx, extension):
-    if isBotAdmin(user_id):
+    if is_bot_admin(user_id):
         await ctx.send('Oops! You can\'t do that.')
     else:
         client.unload_extension(f'cogs.{extension}')
