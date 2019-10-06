@@ -70,6 +70,12 @@ class Dining(commands.Cog):
         embed.add_field(name="These are the times:", value=str_to_send, inline=False)
         await ctx.send(embed=embed)
 
+
 def setup(client):
     client.add_cog(Dining(client))
     return
+
+
+def help(COMMAND_PREFIX):
+    return ["Dining Commands", f"{COMMAND_PREFIX}Takeout (gives the times takeout is open) \n {COMMAND_PREFIX}"
+                               f"DineIn (gives the times the dining hall is open)"]

@@ -222,3 +222,9 @@ class Busing(commands.Cog):
 def setup(client):
     client.add_cog(Busing(client))
     return
+
+
+def help(COMMAND_PREFIX):
+    return ["Busing Commands", f"{COMMAND_PREFIX}Routes [school] (gives available routes)\n"
+                               f"{COMMAND_PREFIX}Stops [campus] (gives available stops)\n"
+                               f"{COMMAND_PREFIX}Bus [stop] [route] (gives estimated arrival time) "]

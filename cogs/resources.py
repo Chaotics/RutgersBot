@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+
 class Resources(commands.Cog):
 
     def __init__(self, client):
@@ -13,11 +14,11 @@ class Resources(commands.Cog):
         desc += '\n[Joseph\'s Final Review](http://joeb3219.github.io/cs111/final.pdf)'
 
         embed = discord.Embed(
-            title = 'CS111 Resources',
-            description = desc
+            title='CS111 Resources',
+            description=desc
         )
 
-        await ctx.send(embed = embed)
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def cs112(self, ctx):
@@ -25,23 +26,30 @@ class Resources(commands.Cog):
         desc += '\n[Auride\'s Minimum Spanning Tree Tester](https://dshepsis.github.io/MSTGenerator/)'
 
         embed = discord.Embed(
-            title = 'C112 Resources',
-            description = desc
+            title='C112 Resources',
+            description=desc
         )
 
-        await ctx.send(embed = embed)
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def cs214(self, ctx):
         desc = '[Qasim\'s Systems Programming Guide](http://qasimabbas.github.io/2016-10-31-systems-notes)'
 
         embed = discord.Embed(
-            title = 'CS214 Resources',
-            description = desc
+            title='CS214 Resources',
+            description=desc
         )
 
-        await ctx.send(embed = embed)
+        await ctx.send(embed=embed)
+
 
 def setup(client):
     client.add_cog(Resources(client))
     return
+
+
+def help(COMMAND_PREFIX):
+    return ["Resources", "If available, do r!coursename to get useful course resources.\n"
+                         f"Currently only {COMMAND_PREFIX}cs111, {COMMAND_PREFIX}cs112 and {COMMAND_PREFIX}cs214 "
+                         f"are available."]

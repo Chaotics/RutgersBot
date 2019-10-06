@@ -37,3 +37,6 @@ class Cave(commands.Cog):
 def setup(client):
     client.add_cog(Cave(client))
     return
+
+def help(COMMAND_PREFIX):
+    return ["Cave Commands", f"{COMMAND_PREFIX}Cave (gives the times the cave is open)"]

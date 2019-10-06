@@ -1,3 +1,4 @@
+import importlib
 import os
 import signal
 import sys
@@ -13,6 +14,7 @@ COMMAND_PREFIX = "r!"
 client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
 client.remove_command('help')
 
+
 # check for bot admins
 def is_bot_admin(id):
     admins = [93121870949281792, 126420592579706880]
@@ -20,10 +22,14 @@ def is_bot_admin(id):
         return True
     return False
 
+
 # a signal handler to handle shutdown of the bot from the terminal
 def signal_handler(sig, frame):
     print('Closing bot...')
     sys.exit(0)
+
+
+loadedHelpData = [[]]
 
 
 @client.command()
@@ -33,24 +39,12 @@ async def help(ctx):
                                                  "For more information about each command simply attempt\n"
                                                  "to perform the command with no inputs."
                     , inline=False)
+
     embed.add_field(name="Admin Commands",
                     value=f"{COMMAND_PREFIX}load (loads a set of commands) \n {COMMAND_PREFIX}unload (unloads a set of "
                           "commands)", inline=False)
-    embed.add_field(name="Cave Commands",
-                    value=f"{COMMAND_PREFIX}Cave (gives the times the cave is open)", inline=False)
-    embed.add_field(name="Dining Commands",
-                    value=f"{COMMAND_PREFIX}Takeout (gives the times takeout is open) \n {COMMAND_PREFIX}DineIn (gives "
-                          "the times the dining hall is open)", inline=False)
-    embed.add_field(name="Busing Commands",
-                    value=f"{COMMAND_PREFIX}Routes [school] (gives available routes)\n"
-                          f"{COMMAND_PREFIX}Stops [campus] (gives available stops)\n"
-                          f"{COMMAND_PREFIX}Bus [stop] [route] (gives estimated arrival time) "
-                    , inline=False)
-    embed.add_field(name="Resources",
-                    value="If available, do r!coursename to get useful course resources.\n"
-                          f"Currently only {COMMAND_PREFIX}cs111, {COMMAND_PREFIX}cs112 and {COMMAND_PREFIX}cs214 "
-                          f"are available."
-                    , inline=False)
+    for data in loadedHelpData:
+        embed.add_field(name=data[0], value=data[1], inline=False)
 
     await ctx.send(embed=embed)
 
@@ -102,6 +96,7 @@ async def unload(ctx, extension):
         await ctx.send(msg)
         return
 
+
 @client.command()
 async def reload(ctx, extension):
     user_id = ctx.author.id
@@ -112,6 +107,7 @@ async def reload(ctx, extension):
         client.load_extension(f"cogs.{extension}")
         await ctx.send('Cog reloaded.')
         return
+
 
 @client.event
 async def on_ready():
@@ -125,6 +121,8 @@ async def on_ready():
 if __name__ == '__main__':
     # sets up signal to be recognized by user
     signal.signal(signal.SIGINT, signal_handler)
+
+    loadedHelpData.clear()
     # for every filename in the cogs directory...
     for filename in os.listdir('./cogs'):
         if filename.endswith('.py'):
@@ -133,5 +131,13 @@ if __name__ == '__main__':
 
             # What is a cog? A cog is a set of commands that go together, they can be unloaded or loaded using
             # a set of commands
+
+            # here we are loading separate help data per cog, in order to deal with changing this core file less
+            # and to allow for expandability
+            lib = importlib.import_module(f'cogs.{filename[:-3]}')
+            helpData = getattr(lib, 'help')
+            currentData = helpData(COMMAND_PREFIX)
+            dataToAdd = [currentData[0], currentData[1]]
+            loadedHelpData.append(dataToAdd)
 
     client.run(TOKEN)
