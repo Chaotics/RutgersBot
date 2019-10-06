@@ -104,7 +104,8 @@ async def unload(ctx, extension):
 
 @client.command()
 async def reload(ctx, extension):
-    if is_bot_admin(user_id):
+    user_id = ctx.author.id
+    if not is_bot_admin(user_id):
         await ctx.send('Oops! You can\'t do that.')
     else:
         client.unload_extension(f'cogs.{extension}')
