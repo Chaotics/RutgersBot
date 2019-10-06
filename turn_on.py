@@ -13,6 +13,12 @@ COMMAND_PREFIX = "r!"
 client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
 client.remove_command('help')
 
+# check for bot admins
+def is_bot_admin(id):
+    admins = [93121870949281792, 126420592579706880]
+    if id in admins:
+        return True
+    return False
 
 # a signal handler to handle shutdown of the bot from the terminal
 def signal_handler(sig, frame):
@@ -55,7 +61,7 @@ async def load(ctx, extension):
     # to load or unload the cog, this can be changed  once we find a more permanent storage method
     result = False
     user_id = ctx.author.id
-    if user_id in [93121870949281792, 126420592579706880]:
+    if is_bot_admin(user_id):
         result = True
 
     if result is False:
@@ -78,7 +84,7 @@ async def load(ctx, extension):
 async def unload(ctx, extension):
     result = False
     user_id = ctx.author.id
-    if user_id in [93121870949281792, 126420592579706880]:
+    if is_bot_admin(user_id):
         result = True
 
     if result is False:
@@ -96,6 +102,15 @@ async def unload(ctx, extension):
         await ctx.send(msg)
         return
 
+@client.command()
+async def reload(ctx, extension):
+    if is_bot_admin(user_id):
+        await ctx.send('Oops! You can\'t do that.')
+    else:
+        client.unload_extension(f'cogs.{extension}')
+        client.load_extension(f"cogs.{extension}")
+        await ctx.send('Cog reloaded.')
+        return
 
 @client.event
 async def on_ready():
