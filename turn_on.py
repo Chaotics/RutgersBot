@@ -14,7 +14,7 @@ client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
 client.remove_command('help')
 
 # check for bot admins
-def isBotAdmin(id):
+def is_bot_admin(id):
     admins = [93121870949281792, 126420592579706880]
     if id in admins:
         return True
@@ -61,7 +61,7 @@ async def load(ctx, extension):
     # to load or unload the cog, this can be changed  once we find a more permanent storage method
     result = False
     user_id = ctx.author.id
-    if self.isBotAdmin(user_id):
+    if isBotAdmin(user_id):
         result = True
 
     if result is False:
@@ -84,7 +84,7 @@ async def load(ctx, extension):
 async def unload(ctx, extension):
     result = False
     user_id = ctx.author.id
-    if self.isBotAdmin(user_id):
+    if isBotAdmin(user_id):
         result = True
 
     if result is False:
