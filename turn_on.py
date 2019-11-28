@@ -113,10 +113,17 @@ async def reload(ctx, extension):
 @client.event
 async def on_ready():
     await client.change_presence(activity=discord.Game('the Rutgers buses'))
+    if 'Management' in client.cogs:
+        management_cog = client.cogs["Management"]
+        await management_cog.load_muted_users()
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
     print('------')
+
+
+class InvalidConfigurationException(Exception):
+    pass
 
 
 if __name__ == '__main__':

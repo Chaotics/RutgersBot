@@ -9,3 +9,6 @@ MONGO_KEY = ""
 
 # the roles which should be allowed to perform moderation
 MODERATOR_ROLES = [""]
+
+# the role which will be assigned when a user is muted
+MUTED_ROLE = ""
