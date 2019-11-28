@@ -1,6 +1,5 @@
 import importlib
 import os
-import signal
 import sys
 
 import discord
@@ -11,6 +10,7 @@ import secret
 
 TOKEN = secret.LOGIN_TOKEN
 COMMAND_PREFIX = "r!"
+COLOR_RED = 0xff1300
 client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
 client.remove_command('help')
 
@@ -34,7 +34,7 @@ loadedHelpData = [[]]
 
 @client.command()
 async def help(ctx):
-    embed = discord.Embed(title="Help", description="A general list of commands provided", color=0xff1300)
+    embed = discord.Embed(title="Help", description="A general list of commands provided", color=COLOR_RED)
     embed.add_field(name="Basic Commands", value=f"Do {COMMAND_PREFIX}help to see this help screen!\n"
                                                  "For more information about each command simply attempt\n"
                                                  "to perform the command with no inputs."
@@ -139,5 +139,4 @@ if __name__ == '__main__':
             currentData = helpData(COMMAND_PREFIX)
             dataToAdd = [currentData[0], currentData[1]]
             loadedHelpData.append(dataToAdd)
-
     client.run(TOKEN)

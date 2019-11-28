@@ -1,6 +1,10 @@
+from datetime import datetime
+
 import discord
 from discord.ext import commands
-from datetime import datetime
+
+from turn_on import COLOR_RED
+
 
 class Cave(commands.Cog):
 
@@ -10,8 +14,8 @@ class Cave(commands.Cog):
     @commands.command()
     async def Cave(self, ctx):
         currentDT = datetime.today().strftime('%A')
-        #print(currentDT)
-        embed = discord.Embed(title="Cave Times", description="", color=0xff1300)
+        # print(currentDT)
+        embed = discord.Embed(title="Cave Times", description="", color=COLOR_RED)
         if currentDT == "Monday":
             str_to_send = "Monday: 1PM - 11PM\n"
         elif currentDT == "Tuesday":
@@ -37,6 +41,7 @@ class Cave(commands.Cog):
 def setup(client):
     client.add_cog(Cave(client))
     return
+
 
 def help(COMMAND_PREFIX):
     return ["Cave Commands", f"{COMMAND_PREFIX}Cave (gives the times the cave is open)"]

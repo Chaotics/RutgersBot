@@ -1,6 +1,9 @@
+from datetime import datetime
+
 import discord
 from discord.ext import commands
-from datetime import datetime
+
+from turn_on import COLOR_RED
 
 
 class Dining(commands.Cog):
@@ -10,7 +13,7 @@ class Dining(commands.Cog):
 
     @commands.command()
     async def Takeout(self, ctx):
-        embed = discord.Embed(title="Takeout Times", color=0xff1300, description="")
+        embed = discord.Embed(title="Takeout Times", color=COLOR_RED, description="")
         currentDT = datetime.today().strftime('%A')
 
         breakfast_time_str = "Breakfast: 7 AM – 11:30 AM \n"
@@ -50,7 +53,7 @@ class Dining(commands.Cog):
         Brunch: 9:30AM – 4:00PM
         Dinner: 4:00 – 8:00PM
         """
-        embed = discord.Embed(title="Dining Times", description="", color=0xff1300)
+        embed = discord.Embed(title="Dining Times", description="", color=COLOR_RED)
 
         currentDT = datetime.today().strftime('%A')
         week_breakfast_str = "Breakfast: 7 AM – 11 AM\n"

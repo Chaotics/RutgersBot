@@ -7,6 +7,7 @@ from discord.ext import commands
 from api_utils import create_api_url, params_append_coords, API_REQUEST_HEADERS, API_AGENCIES, CAMPUS_FULL_NAMES, \
     attach_api_error, params_append_stop_and_route, convert_api_datetime, is_data_stale
 from data_utils import find_by_api_id, BusingDataType, find_bus_data
+from turn_on import COLOR_RED
 
 
 class Busing(commands.Cog):
@@ -38,7 +39,7 @@ class Busing(commands.Cog):
     @commands.command()
     async def Stops(self, ctx, campus=None):
         # creates an embed to output the relevant info
-        embed = discord.Embed(title="Stops", description="", color=0xff1300)
+        embed = discord.Embed(title="Stops", description="", color=COLOR_RED)
         # starts by first checking if the campus value provided is valid
         if campus not in Busing._VALID_CAMPUSES_FOR_STOPS:
             # if the provided campus is invalid, an error is sent back
@@ -94,7 +95,7 @@ class Busing(commands.Cog):
     @commands.command()
     async def Routes(self, ctx, campus=None):
         # first an embed is created to send the routes back to the server
-        embed = discord.Embed(title="Routes", description="", color=0xff1300)
+        embed = discord.Embed(title="Routes", description="", color=COLOR_RED)
 
         # the campus is validated
         if campus not in Busing._VALID_CAMPUSES_FOR_ROUTES:
@@ -150,7 +151,7 @@ class Busing(commands.Cog):
     @commands.command()
     async def Bus(self, ctx, stop="", route=""):
         # first an embed is created to convey the arrival estimates back to the server
-        embed = discord.Embed(title="Arrival Times", description="", color=0xff1300)
+        embed = discord.Embed(title="Arrival Times", description="", color=COLOR_RED)
         # validates the input stop string passed
         stop_data = find_bus_data(BusingDataType.STOP, stop)
         if stop_data is None:
