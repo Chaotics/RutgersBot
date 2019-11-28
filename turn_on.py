@@ -1,14 +1,15 @@
 import importlib
 import os
+import signal
 import sys
 
 import discord
 from discord.ext import commands
 from discord.ext.commands import ExtensionNotLoaded, ExtensionAlreadyLoaded
 
-import secret
+import config
 
-TOKEN = secret.LOGIN_TOKEN
+TOKEN = config.LOGIN_TOKEN
 COMMAND_PREFIX = "r!"
 COLOR_RED = 0xff1300
 client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)

@@ -2,7 +2,7 @@ from datetime import datetime
 
 import pytz as pytz
 
-from secret import X_RAPIDAPI_KEY
+from config import X_RAPIDAPI_KEY
 
 # declares constants necessary to make requests to the API
 API_URL_PROTOCOL = "https://"
