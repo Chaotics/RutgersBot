@@ -50,6 +50,15 @@ async def help(ctx):
     await ctx.send(embed=embed)
 
 
+# Function that is run when the Management cog is loaded
+async def perform_management_load():
+    # checks if the cog is loaded, and if it is, the instance of that Cog is captured
+    # and then the temporarily muted users are loaded into that instance
+    if 'Management' in client.cogs:
+        management_cog = client.cogs["Management"]
+        await management_cog.load_temp_muted_users()
+
+
 @client.command()
 async def load(ctx, extension):
     # currently for loading and unloading commands, I only check if it matches my ID
@@ -67,10 +76,10 @@ async def load(ctx, extension):
         msg = ""
         try:
             client.load_extension(f"cogs.{extension}")
+            await perform_management_load()
             msg = "Extension loaded successfully."
         except ExtensionAlreadyLoaded:
             msg = "Extension failed to load."
-
         await ctx.send(msg)
         return
 
@@ -113,9 +122,7 @@ async def reload(ctx, extension):
 @client.event
 async def on_ready():
     await client.change_presence(activity=discord.Game('the Rutgers buses'))
-    if 'Management' in client.cogs:
-        management_cog = client.cogs["Management"]
-        await management_cog.load_muted_users()
+    await perform_management_load()
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)

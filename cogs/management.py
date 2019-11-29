@@ -13,10 +13,15 @@ from discord.ext import commands
 import config
 from turn_on import COMMAND_PREFIX, COLOR_RED, InvalidConfigurationException
 
-MUTED_USERS_FILE_PATH = "muted_users.json"
+MUTED_USERS_FILE_PATH = "temporarily_muted_users.json"
 
 
 def is_mute_role_defined():
+    """
+    Function that checks if the mute role is defined within config.py. If it isn't an InvalidConfigurationException is raised
+    :return: None
+    """
+
     async def check(ctx):
         if not config.MUTED_ROLE:
             await ctx.send("The muted role is undefined. Please ask your server administrator to define it")
@@ -28,51 +33,96 @@ def is_mute_role_defined():
 
 
 class CouroutineTimer:
+    """
+    A class that represents a timer that is able to run a coroutine without blocking the main execution flow
+    """
+
     def __init__(self, timeout, callback, callback_args: dict):
+        """
+        Constructor for the CoroutineTimer class
+        :param timeout: the time delay after which the callback will be executed (in seconds)
+        :param callback: the callback function that is executed after timeout
+        :param callback_args: the arguments that will be passed to the callback function
+        """
         self.timeout = max(0, timeout)
         self.callback = callback
         self.callback_args = callback_args
+        # creates a task to perform a task in the future
         self.task = asyncio.ensure_future(self.perform_task())
 
+    # the function that is used to run the CoroutineTimer
     async def perform_task(self):
+        # sleep is called for the timeout period of time
         await asyncio.sleep(self.timeout)
+        # callback is called after the timeout has passed
         await self.callback(**self.callback_args)
 
 
-async def remove_muted_role(guild, user):
-    was_role_removed = False
-    muted_role = next(filter(lambda role: role.name == config.MUTED_ROLE, user.roles), None)
-    if muted_role is not None:
-        await user.remove_roles(muted_role)
-        was_role_removed = True
-        await user.send(f"You have been unmuted from the server \"{guild.name}\"")
-    return was_role_removed
-
-
-async def assign_muted_role(guild, user, mute_reason):
+async def assign_muted_role(guild, member, mute_reason):
+    """
+    Function that is responsible for assigning the muted role to a user within a guild for the given reason
+    :param guild: the server where mute will happen
+    :param member: the user to which the muted role is to be added
+    :param mute_reason: the reason for which the mute was assigned
+    :return: None
+    """
+    # tries to find the muted role object within the server and then the role is assigned to the user
     muted_role = next(filter(lambda role: role.name == config.MUTED_ROLE, guild.roles), None)
-    await user.add_roles(muted_role, reason=mute_reason)
+    await member.add_roles(muted_role, reason=mute_reason)
+
+
+async def remove_muted_role(guild, member):
+    """
+    Function that is responsible for removing the muted role from a user within the specified guild
+    :param guild: the server where unmute will happen
+    :param member: the user from which the muted role is to be removed
+    :return: bool that represents whether the role was removed
+    """
+    was_role_removed = False
+    # tries to find the muted role object that is on the member
+    muted_role = next(filter(lambda role: role.name == config.MUTED_ROLE, member.roles), None)
+    # checks if the muted role was found to be on the user
+    if muted_role is not None:
+        # the role is removed from the member and a message is sent to them, letting them know that they were unmuted
+        await member.remove_roles(muted_role)
+        was_role_removed = True
+        await member.send(f"You have been unmuted from the server \"{guild.name}\"")
+    return was_role_removed
 
 
 class Management(commands.Cog):
     def __init__(self, client):
         self.client = client
-        self.muted_users_file_lock = threading.Lock()
-        self.muted_users = {}
+        # lock for performing synchronization on the temporarily muted users
+        self.temp_muted_users_file_lock = threading.Lock()
+        # in-memory dictionary of the temporarily muted users
+        self.temp_muted_users = {}
+        # mongodb database connection
         self.dbclient = pymongo.MongoClient(config.MONGO_KEY)
 
     @commands.command()
     @commands.has_any_role(*config.MODERATOR_ROLES)
-    async def warn(self, ctx, user: discord.Member = None, *, warning_reason=None):
-        if user is None or warning_reason is None:
+    async def warn(self, ctx, member: discord.Member = None, *, warning_reason=None):
+        """
+        Method that issues a warning to a user
+        :param ctx: the context under which this command was executed
+        :param member: the user which is to be warned
+        :param warning_reason: the reason for issuing the warning
+        :return: None
+        """
+
+        # makes sure none of the required arguments are missing
+        if member is None or warning_reason is None:
             await ctx.send(embed=Embed(title="Incorrect usage",
                                        description=f"**Correct usage**: {COMMAND_PREFIX}warn [user] [reason]\n "
                                                    "**user** = a member of the server to warn\n"
                                                    " **reason** = a brief explanation for why the "
                                                    "warning was issued", color=COLOR_RED))
             return
+        # the time this warning was issued
         issued_datetime = datetime.utcnow()
-        self.dbclient.bot.profile.update({"_id": user.id},
+        # writes to the database warnings array for the user, as well as other important data
+        self.dbclient.bot.profile.update({"_id": member.id},
                                          {"$push":
                                              {"warnings":
                                                  {
@@ -80,46 +130,72 @@ class Management(commands.Cog):
                                                      "reason": warning_reason,
                                                      "issued_datetime": issued_datetime
                                                  }}}, upsert=True)
-        await ctx.send(f"User \"{user.name}\" has successfully been warned")
-        await user.send(
+        await ctx.send(f"User \"{member.name}\" has successfully been warned")
+        await member.send(
             f"You have received a warning on the server \"{ctx.guild}\" for the following reasoning: {warning_reason}")
 
     async def unmute_user_helper(self, guild, user, end_time, perma_mute=False):
+        """
+        Method that is a helper function for unmuting a temporarily muted user
+        :param guild: the server where the unmute will be performed
+        :param user: the user to unmute
+        :param end_time: the time when the user is to be unmuted
+        :param perma_mute: whether or not the function was invoked by permanent mute
+        :return: bool representing whether or not the user was removed from the list of temporarily muted users
+        """
         was_role_removed = False
-        self.muted_users_file_lock.acquire()
-        if user.id in self.muted_users[guild.id] and (perma_mute or self.muted_users[guild.id][user.id] == end_time):
-            del self.muted_users[guild.id][user.id]
+        self.temp_muted_users_file_lock.acquire()
+        # verifies that the user exists in the in-memory dictionary
+        if user.id in self.temp_muted_users[guild.id] and (
+                perma_mute or self.temp_muted_users[guild.id][user.id] == end_time):
+            # deletes the user from the dictionary and opens the file and writes the updated
+            del self.temp_muted_users[guild.id][user.id]
             with open(MUTED_USERS_FILE_PATH, "w") as muted_users_file:
-                json.dump(self.muted_users, muted_users_file, default=str)
+                json.dump(self.temp_muted_users, muted_users_file, default=str)
             was_role_removed = await remove_muted_role(guild, user)
-        self.muted_users_file_lock.release()
+        self.temp_muted_users_file_lock.release()
         return was_role_removed
 
     @is_mute_role_defined()
-    async def load_muted_users(self):
-        self.muted_users_file_lock.acquire()
+    async def load_temp_muted_users(self):
+        """
+        Method that is called when the Cog is loaded to reload the temporarily muted users from the file
+        :return: None
+        """
+        self.temp_muted_users_file_lock.acquire()
+        # if the file exists, its read and a copy of the data is loaded into a dictionary
         if path.exists(MUTED_USERS_FILE_PATH):
             with open(MUTED_USERS_FILE_PATH, "r") as muted_users_file:
                 temp_dict = json.load(muted_users_file)
-                self.muted_users = {}
+                self.temp_muted_users = {}
                 for guild_id, guild_muted_users in temp_dict.items():
                     guild_id = int(guild_id)
                     guild = self.client.get_guild(guild_id)
-                    self.muted_users[guild_id] = {}
+                    self.temp_muted_users[guild_id] = {}
                     for user_id, end_time in guild_muted_users.items():
                         user_id = int(user_id)
                         user = guild.get_member(user_id)
                         end_datetime = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S.%f")
-                        self.muted_users[guild_id][user_id] = end_datetime
+                        self.temp_muted_users[guild_id][user_id] = end_datetime
+                        # creates a CouroutineTimer for users that need to be unmuted in the future
                         CouroutineTimer((end_datetime - datetime.utcnow()).total_seconds(), self.unmute_user_helper,
                                         {"guild": guild, "user": user, "end_time": end_datetime})
-        self.muted_users_file_lock.release()
+        self.temp_muted_users_file_lock.release()
 
     @commands.command()
     @is_mute_role_defined()
     @commands.has_any_role(*config.MODERATOR_ROLES)
-    async def mute(self, ctx, user: discord.Member = None, duration=None, *, mute_reason=None):
-        if user is None or duration is None or mute_reason is None:
+    async def mute(self, ctx, member: discord.Member = None, duration=None, *, mute_reason=None):
+        """
+        Method used to mute a user
+        :param ctx: the context under which the command was executed
+        :param member: the user to be muted
+        :param duration: the duration for which the mute will last
+        :param mute_reason: the reason why the mute was issued
+        :return: None
+        """
+        # makes sure none of the required arguments are missing
+        if member is None or duration is None or mute_reason is None:
             await ctx.send(embed=Embed(title="Incorrect usage",
                                        description=f"**Correct usage**: {COMMAND_PREFIX}mute [user] [duration] ["
                                                    f"reason]\n **user** = a member of the server to mute\n "
@@ -129,12 +205,15 @@ class Management(commands.Cog):
                                                    f"mute was issued",
                                        color=COLOR_RED))
             return
+        # the time when the mute was issued
         issued_datetime = datetime.utcnow()
+        # verifies that the format of the duration string is valid
         if re.match("^\\d+[hms]$", duration) is None:
             await ctx.send(
                 "The provided duration was invalid. It has to be a number >= 0, followed by a character from the "
                 "following: [h]ours, [m]inutes, [s]econds. Note a duration of 0 means permanent mute")
             return
+        # converts the duration to a number and serializes to timedelta
         numerical_duration = int(duration[:-1])
         if duration[-1] == 'h':
             timedelta_duration = timedelta(hours=numerical_duration)
@@ -142,43 +221,55 @@ class Management(commands.Cog):
             timedelta_duration = timedelta(minutes=numerical_duration)
         else:
             timedelta_duration = timedelta(seconds=numerical_duration)
-
         seconds_duration = timedelta_duration.total_seconds()
-        is_permanently_muted = self.dbclient.bot.profile.find_one({"_id": user.id, "permanently_muted": True},
+
+        # checks if the user is already permanently muted
+        is_permanently_muted = self.dbclient.bot.profile.find_one({"_id": member.id, "permanently_muted": True},
                                                                   {"_id": 1}) is not None
+        # if so, the issuer is made aware of this fact
         if is_permanently_muted:
-            await ctx.send(f"User \"{user.name}\" is already permanently muted")
+            await ctx.send(f"User \"{member.name}\" is already permanently muted")
         else:
+            # if the numerical duration wasn't 0, it is a temporary/timed mute
             if numerical_duration != 0:
+                # calculates the time when the mute will end
                 mute_end_time = issued_datetime + timedelta_duration
-                self.muted_users_file_lock.acquire()
-                if ctx.guild.id not in self.muted_users or user.id not in self.muted_users[ctx.guild.id] or \
-                        self.muted_users[ctx.guild.id][user.id] < mute_end_time:
-                    if ctx.guild.id not in self.muted_users:
-                        self.muted_users[ctx.guild.id] = {}
-                    self.muted_users[ctx.guild.id][user.id] = mute_end_time
+                # updates the temporary muted users file, assigns the mute role to the user and creates a
+                # CoroutineTimer to unmute in the future
+                self.temp_muted_users_file_lock.acquire()
+                if ctx.guild.id not in self.temp_muted_users or member.id not in self.temp_muted_users[ctx.guild.id] or \
+                        self.temp_muted_users[ctx.guild.id][member.id] < mute_end_time:
+                    if ctx.guild.id not in self.temp_muted_users:
+                        self.temp_muted_users[ctx.guild.id] = {}
+                    self.temp_muted_users[ctx.guild.id][member.id] = mute_end_time
                     with open(MUTED_USERS_FILE_PATH, "w+") as muted_users_file:
-                        json.dump(self.muted_users, muted_users_file, default=str)
-                    await assign_muted_role(ctx.guild, user, mute_reason)
+                        json.dump(self.temp_muted_users, muted_users_file, default=str)
+                    await assign_muted_role(ctx.guild, member, mute_reason)
                     CouroutineTimer(seconds_duration - ((datetime.utcnow() - issued_datetime).total_seconds()),
                                     self.unmute_user_helper,
-                                    {"guild": ctx.guild, "user": user, "end_time": mute_end_time})
-                self.muted_users_file_lock.release()
-                await ctx.send(f"User \"{user.name}\" has successfully been muted for {duration}")
-                await user.send(
+                                    {"guild": ctx.guild, "user": member, "end_time": mute_end_time})
+                self.temp_muted_users_file_lock.release()
+                # sends messages to the server and the user indicating successful mute
+                await ctx.send(f"User \"{member.name}\" has successfully been muted for {duration}")
+                await member.send(
                     f"You have been muted for {duration} on the server \"{ctx.guild}\" for the following reason: {mute_reason}")
+            # otherwise, its a permanent mute
             else:
-                await assign_muted_role(ctx.guild, user, mute_reason)
-                self.muted_users_file_lock.acquire()
-                if ctx.guild.id in self.muted_users and user.id in self.muted_users[ctx.guild.id]:
-                    del self.muted_users[ctx.guild.id][user.id]
+                # assigns the muted role to the user and if the user was temporarily muted, removes them from
+                # the temporary file and the in-memory dictionary
+                await assign_muted_role(ctx.guild, member, mute_reason)
+                self.temp_muted_users_file_lock.acquire()
+                if ctx.guild.id in self.temp_muted_users and member.id in self.temp_muted_users[ctx.guild.id]:
+                    del self.temp_muted_users[ctx.guild.id][member.id]
                     with open(MUTED_USERS_FILE_PATH, "w+") as muted_users_file:
-                        json.dump(self.muted_users, muted_users_file, default=str)
-                self.muted_users_file_lock.release()
-                await ctx.send(f"User \"{user.name}\" has successfully been muted permanently")
-                await user.send(
+                        json.dump(self.temp_muted_users, muted_users_file, default=str)
+                self.temp_muted_users_file_lock.release()
+                # sends messages to the server and the user indicating a successful permanent mute
+                await ctx.send(f"User \"{member.name}\" has successfully been muted permanently")
+                await member.send(
                     f"You have been permanently muted on the server \"{ctx.guild}\" for the following reason: {mute_reason}")
-        self.dbclient.bot.profile.update({"_id": user.id},
+        # writes the issued mute data to the database to serve as a log
+        self.dbclient.bot.profile.update({"_id": member.id},
                                          {"$push": {
                                              "mutes":
                                                  {
@@ -194,19 +285,27 @@ class Management(commands.Cog):
     @commands.command()
     @is_mute_role_defined()
     @commands.has_any_role(*config.MODERATOR_ROLES)
-    async def unmute(self, ctx, user: discord.Member = None):
-        if user is None:
+    async def unmute(self, ctx, member: discord.Member = None):
+        """
+        Method that is used to unmute a user
+        :param ctx: the context under which the unmute is issued
+        :param member: the user which is to be unmuted
+        :return: None
+        """
+        # makes sure that the required arguments are given
+        if member is None:
             await ctx.send(embed=Embed(title="Incorrect usage",
                                        description=f"**Correct usage**: {COMMAND_PREFIX}unmute [user]\n"
                                                    f"**user** = a member of the server to unmute",
                                        color=COLOR_RED))
             return
-        if await self.unmute_user_helper(ctx.guild, user, 0, True) or \
-                await remove_muted_role(ctx.guild, user):
-            self.dbclient.bot.profile.find_one_and_update({"_id": user.id, "permanently_muted": {"$exists": True}},
+        # tries to remove the the muted role from the user and update the database
+        if await self.unmute_user_helper(ctx.guild, member, 0, True) or \
+                await remove_muted_role(ctx.guild, member):
+            self.dbclient.bot.profile.find_one_and_update({"_id": member.id, "permanently_muted": {"$exists": True}},
                                                           {"$set": {"permanently_muted": False}})
         else:
-            await ctx.send(f"User \"{user.name}\" isn't currently muted")
+            await ctx.send(f"User \"{member.name}\" isn't currently muted")
 
 
 def setup(client):
