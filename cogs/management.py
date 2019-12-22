@@ -307,6 +307,105 @@ class Management(commands.Cog):
         else:
             await ctx.send(f"User \"{member.name}\" isn't currently muted")
 
+    @commands.command()
+    @commands.has_any_role(*config.MODERATOR_ROLES)
+    async def ban(self, ctx, member: discord.Member = None, delete_days=None, *, ban_reason=None):
+        """
+        Method that is used to ban a user
+        :param ctx: the context under which the ban is issued
+        :param member: the user which is to be banned
+        :param ban_reason: the reason for which the user is banned
+        :return: None
+        """
+        # makes sure that the required arguments are given and the values are expected
+        if member is None or delete_days is None or not delete_days.isnumeric() or not (
+                0 <= int(delete_days) <= 7) or ban_reason is None:
+            await ctx.send(embed=Embed(title="Incorrect usage",
+                                       description=f"**Correct usage**: {COMMAND_PREFIX}ban [user] [delete_days] [reason]\n"
+                                                   "**user** = a member of the server to ban\n"
+                                                   "**delete_days** = number of days worth of messages to delete from "
+                                                   "the user (from 0-7 inclusive)\n"
+                                                   "**reason** = the reason for which the user is getting banned",
+                                       color=COLOR_RED))
+            return
+        # sets the issued datetime
+        issued_datetime = datetime.utcnow()
+        # convert the days to a number
+        delete_days = int(delete_days)
+        # bans the user from the server
+        await ctx.guild.ban(member, delete_message_days=delete_days, reason=ban_reason)
+        # reflects the ban into the database
+        self.dbclient.bot.profile.update({"_id": member.id},
+                                         {"$push": {
+                                             "bans": {
+                                                 "issuer": ctx.author.id,
+                                                 "reason": ban_reason,
+                                                 "issued_datetime": issued_datetime,
+                                                 "deleted_days": delete_days
+                                             }}}, upsert=True)
+        # conveys that the ban was successful to the server
+        await ctx.send(f"User \"{member.name}\" has successfully been banned from this server")
+        # communicates the ban to the user and the reason for it
+        try:
+            await member.send(f"You have been permanently banned on the server \"{ctx.guild}\" for the following "
+                              f"reasoning: {ban_reason}")
+        except Exception:
+            pass
+
+    @commands.command()
+    @commands.has_any_role(*config.MODERATOR_ROLES)
+    async def unban(self, ctx, member_id=None, *, unban_reason=None):
+        """
+        Method that is used to unban a user
+        :param ctx: the context under which the unban is issued
+        :param member_id: the id of the user which is to be unbanned
+        :param unban_reason: the reason for which the user is unbanned
+        :return: None
+        """
+        # ensures that the required parameters are passed in
+        if member_id is None or not member_id.isnumeric() or unban_reason is None:
+            await ctx.send(embed=Embed(title="Incorrect usage",
+                                       description=f"**Correct usage**: {COMMAND_PREFIX}unban [user_id] [reason]\n"
+                                                   "**user_id** = the id of the user to unban\n"
+                                                   "**reason** = the reason for which the user is being unbanned",
+                                       color=COLOR_RED))
+            return
+        # converts the passed in id to a number
+        member_id = int(member_id)
+        # sets the issued datetime of the unban
+        issued_datetime = datetime.utcnow()
+        # gets the currently banned users
+        currently_banned_users = await ctx.guild.bans()
+        # tries to find the user within the list of banned users
+        user = next((entry.user for entry in currently_banned_users if entry.user.id == member_id), None)
+        # if the user couldn't be found in the list of banned users, then error is communicated to the user
+        if user is None:
+            await ctx.send(embed=Embed(title="User not found",
+                                       description="The specified user id couldn't be resolved to a banned Discord "
+                                                   "user in this server. Either the given user id was invalid or the "
+                                                   "user id isn't currently banned in this server",
+                                       color=COLOR_RED))
+            return
+
+        # unbans that the user from the server
+        await ctx.guild.unban(user, reason=unban_reason)
+        # updates the database with the data from the unban
+        self.dbclient.bot.profile.update({"_id": user.id},
+                                         {"$push": {
+                                             "unbans": {
+                                                 "issuer": ctx.author.id,
+                                                 "reason": unban_reason,
+                                                 "issued_datetime": issued_datetime,
+                                             }}}, upsert=True)
+        # conveys the unban was successful to the server
+        await ctx.send(f"User \"{user.name}\" has successfully been unbanned from this server")
+        # communicates the unban to the user and the reason for it
+        try:
+            await user.send(
+                f"You have been unbanned from the server \"{ctx.guild}\" for the following reasoning: {unban_reason}")
+        except Exception:
+            pass
+
 
 def setup(client):
     client.add_cog(Management(client))
@@ -315,4 +414,5 @@ def setup(client):
 
 def help(COMMAND_PREFIX):
     return ["Management Commands",
-            f"{COMMAND_PREFIX}Warn [user] [reason]\n{COMMAND_PREFIX}Mute [user] [duration] [reason]\n{COMMAND_PREFIX}Unmute [user]"]
+            f"{COMMAND_PREFIX}Warn [user] [reason]\n{COMMAND_PREFIX}Mute [user] [duration] [reason]\n{COMMAND_PREFIX}Unmute [user]\n"
+            f"{COMMAND_PREFIX}Ban [user] [delete_days] [reason]\n{COMMAND_PREFIX}Unban [user_id] [reason]"]
