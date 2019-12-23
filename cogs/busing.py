@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 import discord
-import requests
+from aiohttp import ClientSession
 from discord.ext import commands
 
 from api_utils import create_api_url, params_append_coords, API_REQUEST_HEADERS, API_AGENCIES, CAMPUS_FULL_NAMES, \
@@ -62,25 +62,26 @@ class Busing(commands.Cog):
         if should_request:
             # otherwise, a request is made to the API to fetch the bus stops, using the url, required headers,
             # and the required and optional parameters
-            response = requests.get(url=Busing._STOPS_API_URL, headers=API_REQUEST_HEADERS,
-                                    params=params_append_coords(campus))
-            # once the response comes back from the API, the status_code is checked to see if it was successful
-            if response.status_code == requests.codes.ok:
-                json_response = response.json()
-                stop_list = []
-                for stop_info in json_response["data"]:
-                    stop_data = find_by_api_id(BusingDataType.STOP, int(stop_info["stop_id"]))
-                    stop_list.append(str(stop_data))
-                # if the request was successful, the data is parsed to filter only the name field, and then
-                # all the stops are concatenated using a new line character to be set into the embed
-                stop_names = "\n".join(stop_list)
-                self.cache_data(cached_resource, json_response, stop_names)
-            else:
-                # if the request was unsuccessful, an error is attached to the embed instead
-                attach_api_error(embed=embed, err_code=response.status_code, err_type=response.reason,
-                                 err_msg=response.text)
-                await ctx.send(embed=embed)
-                return
+            async with ClientSession() as session:
+                async with session.get(url=Busing._STOPS_API_URL, headers=API_REQUEST_HEADERS,
+                                       params=params_append_coords(campus)) as response:
+                    # once the response comes back from the API, the status_code is checked to see if it was successful
+                    if response.status == 200:
+                        json_response = await response.json()
+                        stop_list = []
+                        for stop_info in json_response["data"]:
+                            stop_data = find_by_api_id(BusingDataType.STOP, int(stop_info["stop_id"]))
+                            stop_list.append(str(stop_data))
+                        # if the request was successful, the data is parsed to filter only the name field, and then
+                        # all the stops are concatenated using a new line character to be set into the embed
+                        stop_names = "\n".join(stop_list)
+                        self.cache_data(cached_resource, json_response, stop_names)
+                    else:
+                        # if the request was unsuccessful, an error is attached to the embed instead
+                        attach_api_error(embed=embed, err_code=response.status, err_type=response.reason,
+                                         err_msg=response.text)
+                        await ctx.send(embed=embed)
+                        return
         else:
             stop_names = cached_resource["data"]
         # first, title is chosen by expanding the campus abbreviation string and the value is set to
@@ -116,30 +117,31 @@ class Busing(commands.Cog):
         route_names = ""
         if should_request:
             # a request is made to the API to fetch the list of routes for the provided campus
-            response = requests.get(url=Busing._ROUTES_API_URL, headers=API_REQUEST_HEADERS,
-                                    params=params_append_coords(campus))
-            # the response status code is checked to verify if the request was successful
-            if response.status_code == requests.codes.ok:
-                json_response = response.json()
-                route_list = []
-                for route_info in json_response["data"][API_AGENCIES]:
-                    if not route_info["is_active"]:
-                        continue
-                    route_data = find_by_api_id(BusingDataType.ROUTE, int(route_info["route_id"]))
-                    route_list.append(str(route_data))
-                # if the request was successful, the relevant data from the response is extracted
-                # the data is further filtered to only include the active one"s
-                route_names = "\n".join(route_list)
-                # if the returned list of routes is empty, an appropriate message is conveyed
-                if not route_names:
-                    route_names = "No routes currently active on this campus"
-                self.cache_data(cached_resource, json_response, route_names)
-            else:
-                # otherwise, if the request failed, error is attached to the embed instead
-                attach_api_error(embed=embed, err_code=response.status_code, err_type=response.reason,
-                                 err_msg=response.text)
-                await ctx.send(embed=embed)
-                return
+            async with ClientSession() as session:
+                async with session.get(url=Busing._ROUTES_API_URL, headers=API_REQUEST_HEADERS,
+                                       params=params_append_coords(campus)) as response:
+                    # the response status code is checked to verify if the request was successful
+                    if response.status == 200:
+                        json_response = await response.json()
+                        route_list = []
+                        for route_info in json_response["data"][API_AGENCIES]:
+                            if not route_info["is_active"]:
+                                continue
+                            route_data = find_by_api_id(BusingDataType.ROUTE, int(route_info["route_id"]))
+                            route_list.append(str(route_data))
+                        # if the request was successful, the relevant data from the response is extracted
+                        # the data is further filtered to only include the active one"s
+                        route_names = "\n".join(route_list)
+                        # if the returned list of routes is empty, an appropriate message is conveyed
+                        if not route_names:
+                            route_names = "No routes currently active on this campus"
+                        self.cache_data(cached_resource, json_response, route_names)
+                    else:
+                        # otherwise, if the request failed, error is attached to the embed instead
+                        attach_api_error(embed=embed, err_code=response.status, err_type=response.reason,
+                                         err_msg=response.text)
+                        await ctx.send(embed=embed)
+                        return
         else:
             route_names = cached_resource["data"]
         # the relevant data is attached to the embed in order to send it to the server
@@ -180,36 +182,37 @@ class Busing(commands.Cog):
         times_str = ""
         if should_request:
             # makes a request to fetch the arrival estimates for the given route and stop
-            response = requests.get(url=Busing._ARRIVAL_ESTIMATES_API_URL, headers=API_REQUEST_HEADERS,
-                                    params=params_append_stop_and_route(str(stop_data.api_id), str(route_data.api_id)))
-
-            # checks the status code to determine if the request was successful
-            if response.status_code == requests.codes.ok:
-                json_response = response.json()
-                response_data = json_response["data"]
-                # if the returned data is empty, then it must be that no buses are set to arrive there
-                if not response_data:
-                    times_str = f"Currently there are no buses set to arrive here"
-                else:
-                    # the arrival times from the JSON parsed data is extracted
-                    arrival_times = response_data[0]["arrivals"]
-                    # for every arrival time, the time difference is calculated
-                    for time_info in arrival_times:
-                        # first the datetime string from the API is parsed into Python datetime
-                        time = convert_api_datetime(time_info["arrival_at"])
-                        # then the difference is calculated from the current time in seconds
-                        time_diff = (time - datetime.utcnow()).seconds
-                        # the time string to be sent back is either converted to minutes or seconds depending
-                        # on the time difference calculated
-                        times_str += ((str(round(time_diff)) + " seconds") if time_diff < 60 else (
-                                str(round(time_diff / 60)) + " minutes")) + "\n"
-                self.cache_data(cached_resource, json_response, times_str, 30)
-            else:
-                # otherwise, if the request failed, error is attached to the embed instead
-                attach_api_error(embed=embed, err_code=response.status_code, err_type=response.reason,
-                                 err_msg=response.text)
-                await ctx.send(embed=embed)
-                return
+            async with ClientSession() as session:
+                async with session.get(url=Busing._ARRIVAL_ESTIMATES_API_URL, headers=API_REQUEST_HEADERS,
+                                       params=params_append_stop_and_route(str(stop_data.api_id),
+                                                                           str(route_data.api_id))) as response:
+                    # checks the status code to determine if the request was successful
+                    if response.status == 200:
+                        json_response = await response.json()
+                        response_data = json_response["data"]
+                        # if the returned data is empty, then it must be that no buses are set to arrive there
+                        if not response_data:
+                            times_str = f"Currently there are no buses set to arrive here"
+                        else:
+                            # the arrival times from the JSON parsed data is extracted
+                            arrival_times = response_data[0]["arrivals"]
+                            # for every arrival time, the time difference is calculated
+                            for time_info in arrival_times:
+                                # first the datetime string from the API is parsed into Python datetime
+                                time = convert_api_datetime(time_info["arrival_at"])
+                                # then the difference is calculated from the current time in seconds
+                                time_diff = (time - datetime.utcnow()).seconds
+                                # the time string to be sent back is either converted to minutes or seconds depending
+                                # on the time difference calculated
+                                times_str += ((str(round(time_diff)) + " seconds") if time_diff < 60 else (
+                                        str(round(time_diff / 60)) + " minutes")) + "\n"
+                        self.cache_data(cached_resource, json_response, times_str, 30)
+                    else:
+                        # otherwise, if the request failed, error is attached to the embed instead
+                        attach_api_error(embed=embed, err_code=response.status, err_type=response.reason,
+                                         err_msg=response.text)
+                        await ctx.send(embed=embed)
+                        return
         else:
             times_str = cached_resource["data"]
 
