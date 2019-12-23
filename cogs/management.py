@@ -406,6 +406,111 @@ class Management(commands.Cog):
         except Exception:
             pass
 
+    @commands.command()
+    @commands.has_any_role(*config.MODERATOR_ROLES)
+    async def modInfo(self, ctx, infoType=None, member_id=None):
+        """
+        Method that is used to receive a list of a mods issued warnings
+        :param ctx: the context under which the list is called for
+        :param member_id: the id of the mod
+        :return: None
+        """
+        if member_id is None or not member_id.isnumeric() or infoType is None:
+            await ctx.send(embed=Embed(title="Incorrect usage",
+                                       description=f"**Correct usage**: {COMMAND_PREFIX}info [type] [member_id]\n"
+                                                   "**info** = the type of information you want about \n"
+                                                   "**member_id** = the id for the mod you want to know about",
+                                       color=COLOR_RED))
+            return
+
+        embedToSend = Embed(title="Moderation Info",
+                            description="All of the moderation information for " + member_id, color=COLOR_RED)
+        result = self.dbclient.bot.profile.find({})
+        if result is not None:
+            # go through every profile in the collection in order to find the mods associated with each command:
+            for document in result:
+                # get the specific type of information they are looking for
+                try:
+                    # for every document (profile) in the collection, first get the list of information associated
+                    # with their "warning"/"ban"
+                    userInfo = document[infoType.lower()]
+                    infoType = infoType.lower().capitalize()
+                    str_to_send = ""
+                    i = 1
+                    for item in userInfo:
+                        # now go through and see the issuer responsible for each "warning"/"ban" in the list
+                        if item['issuer'] is not None:
+                            if int(item['issuer']) != int(member_id):
+                                # if the issuer is not the mod given to us, do not consider it
+                                continue
+                        else:
+                            continue
+
+                        str_to_send = str_to_send + "\n" + str(i) + " :\n"
+                        i += 1
+                        for field in item:
+                            # otherwise add all of the warning information to the string
+                            str_to_send = str_to_send + "\t" + str(field) + " : " + str(item[field]) + "\n"
+
+                    if str_to_send != "":
+                        embedToSend.add_field(name="For user: " + str(document['_id']), value=str_to_send,
+                                              inline=False)
+                except TypeError as te:
+                    print(te)
+                except Exception as ex:
+                    print(ex)
+
+        await ctx.send(embed=embedToSend)
+
+    @commands.command()
+    @commands.has_any_role(*config.MODERATOR_ROLES)
+    async def info(self, ctx, infoType=None, member_id=None):
+        """
+        Method that is used to receive a list of warnings issued to a user
+        :param infoType: the type of information to display
+        :param ctx: the context under which the list is called for
+        :param member_id: the id of the user
+        :return: None
+        """
+
+        # ensures that the required parameters are passed in
+        if member_id is None or not member_id.isnumeric() or infoType is None:
+            await ctx.send(embed=Embed(title="Incorrect usage",
+                                       description=f"**Correct usage**: {COMMAND_PREFIX}info [type] [member_id]\n"
+                                                   "**info** = the type of information you want about the user \n"
+                                                   "**member_id** = the id for the user you want to know about",
+                                       color=COLOR_RED))
+            return
+        embedToSend = Embed(title="User Moderation Info",
+                            description="All of the information for " + member_id, color=COLOR_RED)
+        # get the specific users entire profile
+        result = self.dbclient.bot.profile.find_one({"_id": int(member_id)})
+        if result is not None:
+            try:
+                userInfo = result[infoType.lower()]
+                infoType = infoType.lower().capitalize()
+                str_to_send = ""
+                i = 1
+                # go through every single item in their array of "warnings"/"bans"
+                for item in userInfo:
+                    str_to_send = str_to_send + "\n" + str(i) + " :\n"
+                    i += 1
+                    # and get the information for said "warning"/"ban"
+                    for field in item:
+                        str_to_send = str_to_send + "\t" + str(field) + " : " + str(item[field]) + "\n"
+                if str_to_send != "":
+                    embedToSend.add_field(name=infoType, value=str_to_send, inline=False)
+                else:
+                    embedToSend.add_field(name=infoType, value="None to display", inline=False)
+            except TypeError as te:
+                print(te)
+                embedToSend.add_field(name=infoType, value="None to display", inline=False)
+            except Exception as ex:
+                print(ex)
+                embedToSend.add_field(name=infoType, value="An error has occurred", inline=False)
+
+        await ctx.send(embed=embedToSend)
+
 
 def setup(client):
     client.add_cog(Management(client))
@@ -415,4 +520,5 @@ def setup(client):
 def help(COMMAND_PREFIX):
     return ["Management Commands",
             f"{COMMAND_PREFIX}Warn [user] [reason]\n{COMMAND_PREFIX}Mute [user] [duration] [reason]\n{COMMAND_PREFIX}Unmute [user]\n"
-            f"{COMMAND_PREFIX}Ban [user] [delete_days] [reason]\n{COMMAND_PREFIX}Unban [user_id] [reason]"]
+            f"{COMMAND_PREFIX}Ban [user] [delete_days] [reason]\n{COMMAND_PREFIX}Unban [user_id] [reason]"
+            f"{COMMAND_PREFIX}Info [type] [user]\n{COMMAND_PREFIX}ModInfo [type] [user]"]
