@@ -11,7 +11,7 @@ from discord import Embed
 from discord.ext import commands
 
 import config
-from turn_on import COMMAND_PREFIX, COLOR_RED, InvalidConfigurationException
+from turn_on import COLOR_RED, InvalidConfigurationException, correct_usage_embed
 
 MUTED_USERS_FILE_PATH = "temporarily_muted_users.json"
 
@@ -124,11 +124,11 @@ class Management(commands.Cog):
 
         # makes sure none of the required arguments are missing
         if member is None or warning_reason is None:
-            await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}warn [user] [reason]\n "
-                                                   "**user** = a member of the server to warn\n"
-                                                   " **reason** = a brief explanation for why the "
-                                                   "warning was issued", color=COLOR_RED))
+            await ctx.send(embed=correct_usage_embed("warn", {
+                "user": "a member of the server to warn",
+                "reason": "a brief explanation for why the "
+                          "warning was issued"
+            }))
             return
         # the time this warning was issued
         issued_datetime = datetime.utcnow()
@@ -207,14 +207,14 @@ class Management(commands.Cog):
         """
         # makes sure none of the required arguments are missing
         if member is None or duration is None or mute_reason is None:
-            await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}mute [user] [duration] ["
-                                                   f"reason]\n **user** = a member of the server to mute\n "
-                                                   f"**duration** = a numerical value >= 0, immediately followed by h, "
-                                                   f"m or s for hours, minutes and seconds respectively. 0 means "
-                                                   f"permanent mute\n **reason** = a brief explanation for why the "
-                                                   f"mute was issued",
-                                       color=COLOR_RED))
+            await ctx.send(embed=correct_usage_embed("mute", {
+                "user": "a member of the server to mute",
+                "duration": "a numerical value >= 0, immediately "
+                            "followed by h, m or s for hours, minutes "
+                            "and seconds respectively. 0 means permanent "
+                            "mute",
+                "reason": "a brief explanation for why the mute was "
+                          "issued"}))
             return
         # the time when the mute was issued
         issued_datetime = datetime.utcnow()
@@ -305,10 +305,9 @@ class Management(commands.Cog):
         """
         # makes sure that the required arguments are given
         if member is None:
-            await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}unmute [user]\n"
-                                                   f"**user** = a member of the server to unmute",
-                                       color=COLOR_RED))
+            await ctx.send(embed=correct_usage_embed("unmute", {
+                "user": "a member of the server to unmute"
+            }))
             return
         # tries to remove the the muted role from the user and update the database
         if await self.unmute_user_helper(ctx.guild, member, 0, True) or \
@@ -331,13 +330,11 @@ class Management(commands.Cog):
         # makes sure that the required arguments are given and the values are expected
         if member is None or delete_days is None or not delete_days.isnumeric() or not (
                 0 <= int(delete_days) <= 7) or ban_reason is None:
-            await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}ban [user] [delete_days] [reason]\n"
-                                                   "**user** = a member of the server to ban\n"
-                                                   "**delete_days** = number of days worth of messages to delete from "
-                                                   "the user (from 0-7 inclusive)\n"
-                                                   "**reason** = the reason for which the user is getting banned",
-                                       color=COLOR_RED))
+            await ctx.send(embed=correct_usage_embed("ban", {
+                "user": "a member of the server to ban",
+                "delete_days": "number of days worth of messages to delete from the user (from 0-7 inclusive)",
+                "reason": "the reason for which the user is getting banned"
+            }))
             return
         # sets the issued datetime
         issued_datetime = datetime.utcnow()
@@ -375,11 +372,10 @@ class Management(commands.Cog):
         """
         # ensures that the required parameters are passed in
         if member_id is None or not member_id.isnumeric() or unban_reason is None:
-            await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}unban [user_id] [reason]\n"
-                                                   "**user_id** = the id of the user to unban\n"
-                                                   "**reason** = the reason for which the user is being unbanned",
-                                       color=COLOR_RED))
+            await ctx.send(embed=correct_usage_embed("unban", {
+                "user_id": "the id of the user to unban",
+                "reason": "the reason for which the user is being unbanned"
+            }))
             return
         # converts the passed in id to a number
         member_id = int(member_id)
@@ -431,12 +427,10 @@ class Management(commands.Cog):
         if info_type is None or (
                 info_type not in self._INFO_TYPES.keys() and info_type not in self._INFO_TYPES.values()) \
                 or mod_id is None or not mod_id.isnumeric():
-            await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}modinfo [info_type] [mod_id]\n"
-                                                   "**info_type** = the type of information you want; must be one of "
-                                                   "[w]arnings, [m]utes, [b]ans, [u]nbans\n"
-                                                   "**mod_id** = the id of the mod you want to get the info about",
-                                       color=COLOR_RED))
+            await ctx.send(embed=correct_usage_embed("modinfo", {
+                "info_type": "the type of information you want; must be one of [w]arnings, [m]utes, [b]ans, [u]nbans",
+                "mod_id": "the id of the mod for which you want to get the info about"
+            }))
             return
         # creates the embed to return back
         embed_to_send = Embed(title="Moderation Info",
@@ -480,12 +474,10 @@ class Management(commands.Cog):
         if info_type is None or (
                 info_type not in self._INFO_TYPES.keys() and info_type not in self._INFO_TYPES.values()) \
                 or member_id is None or not member_id.isnumeric():
-            await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}info [info_type] [member_id]\n"
-                                                   "**info_type** = the type of information you want;  must be one of "
-                                                   "[w]arnings, [m]utes, [b]ans, [u]nbans\n"
-                                                   "**member_id** = the id for the member you want to know about",
-                                       color=COLOR_RED))
+            await ctx.send(embed=correct_usage_embed("info", {
+                "info_type": "the type of information you want;  must be one of [w]arnings, [m]utes, [b]ans, [u]nbans",
+                "member_id": "the id for the member you want to know about"
+            }))
             return
         embed_to_send = Embed(title="User Moderation Info",
                               description="All of the information for " + member_id, color=COLOR_RED)

@@ -4,6 +4,7 @@ import signal
 import sys
 
 import discord
+from discord import Embed
 from discord.ext import commands
 from discord.ext.commands import ExtensionNotLoaded, ExtensionAlreadyLoaded
 
@@ -131,6 +132,19 @@ async def on_ready():
 
 class InvalidConfigurationException(Exception):
     pass
+
+
+# function to display correct usage of a command
+def correct_usage_embed(command_name: str, args: dict):
+    arg_list = ""
+    for arg_name in args.keys():
+        arg_list = arg_list + f"[{arg_name}]"
+    arg_explanation_str = ""
+    for arg_name, arg_desc in args.items():
+        arg_explanation_str = arg_explanation_str + f"**{arg_name}** = {arg_desc}\n"
+    return Embed(title="Incorrect usage",
+                 description=f"**Correct usage**: {COMMAND_PREFIX}{command_name} {arg_list}\n{arg_explanation_str}",
+                 color=COLOR_RED)
 
 
 if __name__ == '__main__':

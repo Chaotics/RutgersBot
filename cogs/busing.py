@@ -7,7 +7,7 @@ from discord.ext import commands
 from api_utils import create_api_url, params_append_coords, API_REQUEST_HEADERS, API_AGENCIES, CAMPUS_FULL_NAMES, \
     attach_api_error, params_append_stop_and_route, convert_api_datetime, is_data_stale
 from data_utils import find_by_api_id, BusingDataType, find_bus_data
-from turn_on import COLOR_RED
+from turn_on import COLOR_RED, correct_usage_embed, COMMAND_PREFIX
 
 
 class Busing(commands.Cog):
@@ -43,15 +43,15 @@ class Busing(commands.Cog):
         # starts by first checking if the campus value provided is valid
         if campus not in Busing._VALID_CAMPUSES_FOR_STOPS:
             # if the provided campus is invalid, an error is sent back
-            embed.add_field(name="**ERROR**", value=f"Please provide a campus to pull stops from. It has to be "
-                                                    f"one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
-                                                    "nk = Newark\n"
-                                                    "cm = Camden\n"
-                                                    "li = Livingston\n"
-                                                    "bu = Busch\n"
-                                                    "cd = Cook\\Douglass\n"
-                                                    "ca = College Avenue", inline=False)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=correct_usage_embed("stops", {
+                "campus": f"it has to be one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
+                          "nk = Newark\n"
+                          "cm = Camden\n"
+                          "li = Livingston\n"
+                          "bu = Busch\n"
+                          "cd = Cook\\Douglass\n"
+                          "ca = College Avenue"
+            }))
             return
 
         if campus not in self.cache["stops"]:
@@ -101,13 +101,12 @@ class Busing(commands.Cog):
         # the campus is validated
         if campus not in Busing._VALID_CAMPUSES_FOR_ROUTES:
             # if its invalid, a list of valid campuses to retrieve routes is attached to the embed
-            embed.add_field(name="**ERROR**", value="Please provide a school to pull routes from. It has to be "
-                                                    f"one of {Busing._VALID_CAMPUSES_FOR_ROUTES}\n"
-                                                    "nk = Newark\n"
-                                                    "cm = Camden\n"
-                                                    "nb = New Brunswick", inline=False)
-            # finally, the embed is sent back to the server
-            await ctx.send(embed=embed)
+            await ctx.send(embed=correct_usage_embed("routes", {
+                "campus": f"it has to be one of {Busing._VALID_CAMPUSES_FOR_ROUTES}\n"
+                          "nk = Newark\n"
+                          "cm = Camden\n"
+                          "nb = New Brunswick"
+            }))
             return
 
         if campus not in self.cache["routes"]:
@@ -157,22 +156,18 @@ class Busing(commands.Cog):
         # validates the input stop string passed
         stop_data = find_bus_data(BusingDataType.STOP, stop)
         if stop_data is None:
-            embed.add_field(name="**ERROR**", value="Please provide a correct value for the stop. To get more "
-                                                    "information on the list of possible correct values, use "
-                                                    "r!stops <campus> for a list of possible values for the stop. For"
-                                                    "more information, type r!help",
-                            inline=False)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=correct_usage_embed("bus", {
+                "stop": f"a valid Rutgers stop, fetched from {COMMAND_PREFIX}stops [campus]",
+                "route": f"a valid Rutgers route, fetched from {COMMAND_PREFIX}routes [campus]"
+            }))
             return
         # validates the input route string passed
         route_data = find_bus_data(BusingDataType.ROUTE, route)
         if route_data is None:
-            embed.add_field(name="**ERROR**", value="Please provide a correct value for the route. To get more "
-                                                    "information on the list of possible correct values, use "
-                                                    "r!routes <campus> for a list of possible values for the stop. For"
-                                                    "more information, type r!help",
-                            inline=False)
-            await ctx.send(embed=embed)
+            await ctx.send(embed=correct_usage_embed("bus", {
+                "stop": f"a valid Rutgers stop, fetched from {COMMAND_PREFIX}stops [campus]",
+                "route": f"a valid Rutgers route, fetched from {COMMAND_PREFIX}routes [campus]"
+            }))
             return
         search_str = f"{stop_data.internal_id}{route_data.internal_id}"
         if search_str not in self.cache["bustimes"]:
