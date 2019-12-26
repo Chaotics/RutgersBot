@@ -90,6 +90,15 @@ async def remove_muted_role(guild, member):
     return was_role_removed
 
 
+def create_str_from_info(info_dict: dict):
+    ret = ""
+    # goes through all the dictionary key, value pairs and create a string from it
+    for key, value in info_dict.items():
+        ret = ret + f"\u21B3 {str(key)}: {str(value)}" + \
+              (" seconds" if key == "duration" else "") + "\n"
+    return ret
+
+
 class Management(commands.Cog):
     def __init__(self, client):
         self.client = client
@@ -99,6 +108,8 @@ class Management(commands.Cog):
         self.temp_muted_users = {}
         # mongodb database connection
         self.dbclient = pymongo.MongoClient(config.MONGO_KEY)
+        # all the different info types
+        self._INFO_TYPES = {"w": "warnings", "b": "bans", "m": "mutes", "u": "unmutes"}
 
     @commands.command()
     @commands.has_any_role(*config.MODERATOR_ROLES)
@@ -408,108 +419,94 @@ class Management(commands.Cog):
 
     @commands.command()
     @commands.has_any_role(*config.MODERATOR_ROLES)
-    async def modInfo(self, ctx, infoType=None, member_id=None):
+    async def modinfo(self, ctx, info_type=None, mod_id=None):
         """
-        Method that is used to receive a list of a mods issued warnings
-        :param ctx: the context under which the list is called for
-        :param member_id: the id of the mod
+        Method that is used to receive a list of the warnings, mutes and bans issued by a mod
+        :param ctx: context under which the list is called for
+        :param info_type: type of the info that will be queried; must be one of [w]arnings, [m]utes, [b]ans, [u]nbans
+        :param mod_id: id of the mod for which the info is to be fetched
         :return: None
         """
-        if member_id is None or not member_id.isnumeric() or infoType is None:
+        # makes sure that the arguments passed in are valid
+        if info_type is None or (
+                info_type not in self._INFO_TYPES.keys() and info_type not in self._INFO_TYPES.values()) \
+                or mod_id is None or not mod_id.isnumeric():
             await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}info [type] [member_id]\n"
-                                                   "**info** = the type of information you want about \n"
-                                                   "**member_id** = the id for the mod you want to know about",
+                                       description=f"**Correct usage**: {COMMAND_PREFIX}modinfo [info_type] [mod_id]\n"
+                                                   "**info_type** = the type of information you want; must be one of "
+                                                   "[w]arnings, [m]utes, [b]ans, [u]nbans\n"
+                                                   "**mod_id** = the id of the mod you want to get the info about",
                                        color=COLOR_RED))
             return
-
-        embedToSend = Embed(title="Moderation Info",
-                            description="All of the moderation information for " + member_id, color=COLOR_RED)
-        result = self.dbclient.bot.profile.find({})
+        # creates the embed to return back
+        embed_to_send = Embed(title="Moderation Info",
+                              description="All of the moderation information for " + mod_id, color=COLOR_RED)
+        # converts the mod_id to a number
+        mod_id = int(mod_id)
+        # converts the info_type to the one in the database
+        if len(info_type) == 1:
+            info_type = self._INFO_TYPES[info_type]
+        result = self.dbclient.bot.profile.find({f"{info_type}.issuer": mod_id}, {info_type: 1})
         if result is not None:
             # go through every profile in the collection in order to find the mods associated with each command:
             for document in result:
-                # get the specific type of information they are looking for
-                try:
-                    # for every document (profile) in the collection, first get the list of information associated
-                    # with their "warning"/"ban"
-                    userInfo = document[infoType.lower()]
-                    infoType = infoType.lower().capitalize()
-                    str_to_send = ""
-                    i = 1
-                    for item in userInfo:
-                        # now go through and see the issuer responsible for each "warning"/"ban" in the list
-                        if item['issuer'] is not None:
-                            if int(item['issuer']) != int(member_id):
-                                # if the issuer is not the mod given to us, do not consider it
-                                continue
-                        else:
-                            continue
+                # for every document (profile) in the collection, first get the list of information associated
+                info_list = document[info_type]
+                str_to_send = ""
+                for index, info_dict in enumerate(info_list):
+                    # now go through and create a string for each warning, mute, ban and unban in the list
+                    if info_dict["issuer"] is None or int(info_dict["issuer"]) != mod_id:
+                        continue
+                    if "issuer" in info_dict:
+                        del info_dict["issuer"]
+                    str_to_send = str_to_send + f"\n{str(index + 1)}:\n{create_str_from_info(info_dict)}"
+                if str_to_send != "":
+                    embed_to_send.add_field(name="For user: " + str(document['_id']), value=str_to_send,
+                                            inline=False)
 
-                        str_to_send = str_to_send + "\n" + str(i) + " :\n"
-                        i += 1
-                        for field in item:
-                            # otherwise add all of the warning information to the string
-                            str_to_send = str_to_send + "\t" + str(field) + " : " + str(item[field]) + "\n"
-
-                    if str_to_send != "":
-                        embedToSend.add_field(name="For user: " + str(document['_id']), value=str_to_send,
-                                              inline=False)
-                except TypeError as te:
-                    print(te)
-                except Exception as ex:
-                    print(ex)
-
-        await ctx.send(embed=embedToSend)
+        await ctx.send(embed=embed_to_send)
 
     @commands.command()
     @commands.has_any_role(*config.MODERATOR_ROLES)
-    async def info(self, ctx, infoType=None, member_id=None):
+    async def info(self, ctx, info_type=None, member_id=None):
         """
         Method that is used to receive a list of warnings issued to a user
-        :param infoType: the type of information to display
-        :param ctx: the context under which the list is called for
-        :param member_id: the id of the user
+        :param ctx: context under which the list is called for
+        :param info_type: type of the info that will be queried; must be one of [w]arnings, [m]utes, [b]ans, [u]nbans
+        :param member_id: id of the member for which the info is to be fetched
         :return: None
         """
-
         # ensures that the required parameters are passed in
-        if member_id is None or not member_id.isnumeric() or infoType is None:
+        if info_type is None or (
+                info_type not in self._INFO_TYPES.keys() and info_type not in self._INFO_TYPES.values()) \
+                or member_id is None or not member_id.isnumeric():
             await ctx.send(embed=Embed(title="Incorrect usage",
-                                       description=f"**Correct usage**: {COMMAND_PREFIX}info [type] [member_id]\n"
-                                                   "**info** = the type of information you want about the user \n"
-                                                   "**member_id** = the id for the user you want to know about",
+                                       description=f"**Correct usage**: {COMMAND_PREFIX}info [info_type] [member_id]\n"
+                                                   "**info_type** = the type of information you want;  must be one of "
+                                                   "[w]arnings, [m]utes, [b]ans, [u]nbans\n"
+                                                   "**member_id** = the id for the member you want to know about",
                                        color=COLOR_RED))
             return
-        embedToSend = Embed(title="User Moderation Info",
-                            description="All of the information for " + member_id, color=COLOR_RED)
+        embed_to_send = Embed(title="User Moderation Info",
+                              description="All of the information for " + member_id, color=COLOR_RED)
+        member_id = int(member_id)
+        if len(info_type) == 1:
+            info_type = self._INFO_TYPES[info_type]
         # get the specific users entire profile
-        result = self.dbclient.bot.profile.find_one({"_id": int(member_id)})
+        result = self.dbclient.bot.profile.find_one({"_id": member_id}, {info_type: 1})
         if result is not None:
-            try:
-                userInfo = result[infoType.lower()]
-                infoType = infoType.lower().capitalize()
-                str_to_send = ""
-                i = 1
-                # go through every single item in their array of "warnings"/"bans"
-                for item in userInfo:
-                    str_to_send = str_to_send + "\n" + str(i) + " :\n"
-                    i += 1
-                    # and get the information for said "warning"/"ban"
-                    for field in item:
-                        str_to_send = str_to_send + "\t" + str(field) + " : " + str(item[field]) + "\n"
-                if str_to_send != "":
-                    embedToSend.add_field(name=infoType, value=str_to_send, inline=False)
-                else:
-                    embedToSend.add_field(name=infoType, value="None to display", inline=False)
-            except TypeError as te:
-                print(te)
-                embedToSend.add_field(name=infoType, value="None to display", inline=False)
-            except Exception as ex:
-                print(ex)
-                embedToSend.add_field(name=infoType, value="An error has occurred", inline=False)
+            info_list = result[info_type]
+            info_type = info_type.capitalize()
+            str_to_send = ""
+            # go through every single item in the list of information and add it to a string
+            for index, info_dict in enumerate(info_list):
+                str_to_send = str_to_send + f"\n{str(index + 1)}:\n{create_str_from_info(info_dict)}"
+            if str_to_send != "":
+                embed_to_send.add_field(name=info_type, value=str_to_send, inline=False)
+            else:
+                embed_to_send.add_field(name=info_type, value="None to display", inline=False)
 
-        await ctx.send(embed=embedToSend)
+        await ctx.send(embed=embed_to_send)
 
 
 def setup(client):
@@ -519,6 +516,7 @@ def setup(client):
 
 def help(COMMAND_PREFIX):
     return ["Management Commands",
-            f"{COMMAND_PREFIX}Warn [user] [reason]\n{COMMAND_PREFIX}Mute [user] [duration] [reason]\n{COMMAND_PREFIX}Unmute [user]\n"
-            f"{COMMAND_PREFIX}Ban [user] [delete_days] [reason]\n{COMMAND_PREFIX}Unban [user_id] [reason]"
-            f"{COMMAND_PREFIX}Info [type] [user]\n{COMMAND_PREFIX}ModInfo [type] [user]"]
+            f"{COMMAND_PREFIX}Warn [user] [reason]\n{COMMAND_PREFIX}Mute [user] [duration] [reason]\n"
+            f"{COMMAND_PREFIX}Unmute [user]\n{COMMAND_PREFIX}Ban [user] [delete_days] [reason]\n"
+            f"{COMMAND_PREFIX}Unban [user_id] [reason]{COMMAND_PREFIX}Info [info_type] [user]\n"
+            f"{COMMAND_PREFIX}ModInfo [info_type] [user]"]
