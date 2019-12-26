@@ -133,14 +133,14 @@ class Management(commands.Cog):
         # the time this warning was issued
         issued_datetime = datetime.utcnow()
         # writes to the database warnings array for the user, as well as other important data
-        self.dbclient.bot.profile.update({"_id": member.id},
-                                         {"$push":
-                                             {"warnings":
-                                                 {
-                                                     "issuer": ctx.author.id,
-                                                     "reason": warning_reason,
-                                                     "issued_datetime": issued_datetime
-                                                 }}}, upsert=True)
+        self.dbclient.bot[str(ctx.guild.id)].update({"_id": member.id},
+                                                    {"$push":
+                                                        {"warnings":
+                                                            {
+                                                                "issuer": ctx.author.id,
+                                                                "reason": warning_reason,
+                                                                "issued_datetime": issued_datetime
+                                                            }}}, upsert=True)
         await ctx.send(f"User \"{member.name}\" has successfully been warned")
         await member.send(
             f"You have received a warning on the server \"{ctx.guild}\" for the following reasoning: {warning_reason}")
@@ -235,8 +235,9 @@ class Management(commands.Cog):
         seconds_duration = timedelta_duration.total_seconds()
 
         # checks if the user is already permanently muted
-        is_permanently_muted = self.dbclient.bot.profile.find_one({"_id": member.id, "permanently_muted": True},
-                                                                  {"_id": 1}) is not None
+        is_permanently_muted = self.dbclient.bot[str(ctx.guild.id)].find_one(
+            {"_id": member.id, "permanently_muted": True},
+            {"_id": 1}) is not None
         # if so, the issuer is made aware of this fact
         if is_permanently_muted:
             await ctx.send(f"User \"{member.name}\" is already permanently muted")
@@ -280,18 +281,18 @@ class Management(commands.Cog):
                 await member.send(
                     f"You have been permanently muted on the server \"{ctx.guild}\" for the following reason: {mute_reason}")
         # writes the issued mute data to the database to serve as a log
-        self.dbclient.bot.profile.update({"_id": member.id},
-                                         {"$push": {
-                                             "mutes":
-                                                 {
-                                                     "issuer": ctx.author.id,
-                                                     "reason": mute_reason,
-                                                     "issued_datetime": issued_datetime,
-                                                     "duration": seconds_duration
-                                                 }},
-                                             "$set": {
-                                                 "permanently_muted": is_permanently_muted or seconds_duration == 0}},
-                                         upsert=True)
+        self.dbclient.bot[str(ctx.guild.id)].update({"_id": member.id},
+                                                    {"$push": {
+                                                        "mutes":
+                                                            {
+                                                                "issuer": ctx.author.id,
+                                                                "reason": mute_reason,
+                                                                "issued_datetime": issued_datetime,
+                                                                "duration": seconds_duration
+                                                            }},
+                                                        "$set": {
+                                                            "permanently_muted": is_permanently_muted or seconds_duration == 0}},
+                                                    upsert=True)
 
     @commands.command()
     @is_mute_role_defined()
@@ -312,8 +313,9 @@ class Management(commands.Cog):
         # tries to remove the the muted role from the user and update the database
         if await self.unmute_user_helper(ctx.guild, member, 0, True) or \
                 await remove_muted_role(ctx.guild, member):
-            self.dbclient.bot.profile.find_one_and_update({"_id": member.id, "permanently_muted": {"$exists": True}},
-                                                          {"$set": {"permanently_muted": False}})
+            self.dbclient.bot[str(ctx.guild.id)].find_one_and_update(
+                {"_id": member.id, "permanently_muted": {"$exists": True}},
+                {"$set": {"permanently_muted": False}})
         else:
             await ctx.send(f"User \"{member.name}\" isn't currently muted")
 
@@ -343,14 +345,14 @@ class Management(commands.Cog):
         # bans the user from the server
         await ctx.guild.ban(member, delete_message_days=delete_days, reason=ban_reason)
         # reflects the ban into the database
-        self.dbclient.bot.profile.update({"_id": member.id},
-                                         {"$push": {
-                                             "bans": {
-                                                 "issuer": ctx.author.id,
-                                                 "reason": ban_reason,
-                                                 "issued_datetime": issued_datetime,
-                                                 "deleted_days": delete_days
-                                             }}}, upsert=True)
+        self.dbclient.bot[str(ctx.guild.id)].update({"_id": member.id},
+                                                    {"$push": {
+                                                        "bans": {
+                                                            "issuer": ctx.author.id,
+                                                            "reason": ban_reason,
+                                                            "issued_datetime": issued_datetime,
+                                                            "deleted_days": delete_days
+                                                        }}}, upsert=True)
         # conveys that the ban was successful to the server
         await ctx.send(f"User \"{member.name}\" has successfully been banned from this server")
         # communicates the ban to the user and the reason for it
@@ -397,13 +399,13 @@ class Management(commands.Cog):
         # unbans that the user from the server
         await ctx.guild.unban(user, reason=unban_reason)
         # updates the database with the data from the unban
-        self.dbclient.bot.profile.update({"_id": user.id},
-                                         {"$push": {
-                                             "unbans": {
-                                                 "issuer": ctx.author.id,
-                                                 "reason": unban_reason,
-                                                 "issued_datetime": issued_datetime,
-                                             }}}, upsert=True)
+        self.dbclient.bot[str(ctx.guild.id)].update({"_id": user.id},
+                                                    {"$push": {
+                                                        "unbans": {
+                                                            "issuer": ctx.author.id,
+                                                            "reason": unban_reason,
+                                                            "issued_datetime": issued_datetime,
+                                                        }}}, upsert=True)
         # conveys the unban was successful to the server
         await ctx.send(f"User \"{user.name}\" has successfully been unbanned from this server")
         # communicates the unban to the user and the reason for it
@@ -440,7 +442,7 @@ class Management(commands.Cog):
         # converts the info_type to the one in the database
         if len(info_type) == 1:
             info_type = self._INFO_TYPES[info_type]
-        result = self.dbclient.bot.profile.find({f"{info_type}.issuer": mod_id}, {info_type: 1})
+        result = self.dbclient.bot[str(ctx.guild.id)].find({f"{info_type}.issuer": mod_id}, {info_type: 1})
         if result is not None:
             # go through every profile in the collection in order to find the mods associated with each command:
             for document in result:
@@ -485,7 +487,7 @@ class Management(commands.Cog):
         if len(info_type) == 1:
             info_type = self._INFO_TYPES[info_type]
         # get the specific users entire profile
-        result = self.dbclient.bot.profile.find_one({"_id": member_id}, {info_type: 1})
+        result = self.dbclient.bot[str(ctx.guild.id)].find_one({"_id": member_id}, {info_type: 1})
         if result is not None:
             info_list = result[info_type]
             info_type = info_type.capitalize()
