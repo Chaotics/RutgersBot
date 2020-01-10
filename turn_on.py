@@ -15,11 +15,10 @@ COMMAND_PREFIX = "r!"
 COLOR_RED = 0xff1300
 client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
 client.remove_command('help')
-
+admins = [93121870949281792, 126420592579706880]
 
 # check for bot admins
 def is_bot_admin(id):
-    admins = [93121870949281792, 126420592579706880]
     if id in admins:
         return True
     return False
