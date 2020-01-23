@@ -17,6 +17,7 @@ client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
 client.remove_command('help')
 admins = [93121870949281792, 126420592579706880]
 
+
 # check for bot admins
 def is_bot_admin(id):
     if id in admins:
@@ -38,7 +39,8 @@ async def help(ctx):
     embed = discord.Embed(title="Help", description="A general list of commands provided", color=COLOR_RED)
     embed.add_field(name="Basic Commands", value=f"Do {COMMAND_PREFIX}help to see this help screen!\n"
                                                  "For more information about each command simply attempt\n"
-                                                 "to perform the command with no inputs."
+                                                 "to perform the command with no inputs.\n"
+                                                 f"{COMMAND_PREFIX}repo (provides a link to the open source repository)"
                     , inline=False)
 
     embed.add_field(name="Admin Commands",
@@ -46,7 +48,24 @@ async def help(ctx):
                           "commands)", inline=False)
     for data in loadedHelpData:
         embed.add_field(name=data[0], value=data[1], inline=False)
+    user = ctx.author
+    try:
+        await user.send(embed=embed)
+    except:
+        await ctx.send("Failed to send you a help message. You may have your DMs blocked.")
+        return
+    await ctx.send("Sent you a help message!")
 
+
+@client.command()
+async def repo(ctx):
+    desc = 'Our repository is available [here!](https://github.com/Kironb/RutgersBot)'
+
+    embed = discord.Embed(
+        title='RutgersBot Repository',
+        description=desc,
+        color=COLOR_RED
+    )
     await ctx.send(embed=embed)
 
 
