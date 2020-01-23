@@ -512,5 +512,5 @@ def help(COMMAND_PREFIX):
     return ["Management Commands",
             f"{COMMAND_PREFIX}Warn [user] [reason]\n{COMMAND_PREFIX}Mute [user] [duration] [reason]\n"
             f"{COMMAND_PREFIX}Unmute [user]\n{COMMAND_PREFIX}Ban [user] [delete_days] [reason]\n"
-            f"{COMMAND_PREFIX}Unban [user_id] [reason]{COMMAND_PREFIX}Info [info_type] [user]\n"
+            f"{COMMAND_PREFIX}Unban [user_id] [reason]\n{COMMAND_PREFIX}Info [info_type] [user]\n"
             f"{COMMAND_PREFIX}ModInfo [info_type] [user]"]
