@@ -14,7 +14,7 @@ TOKEN = config.LOGIN_TOKEN
 COMMAND_PREFIX = "r!"
 COLOR_RED = 0xff1300
 client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
-client.remove_command('help')
+client.remove_command("help")
 admins = [93121870949281792, 126420592579706880]
 
 
@@ -27,7 +27,7 @@ def is_bot_admin(id):
 
 # a signal handler to handle shutdown of the bot from the terminal
 def signal_handler(sig, frame):
-    print('Closing bot...')
+    print("Closing bot...")
     sys.exit(0)
 
 
@@ -59,21 +59,31 @@ async def help(ctx):
 
 @client.command()
 async def repo(ctx):
-    desc = 'Our repository is available [here!](https://github.com/Kironb/RutgersBot)'
+    desc = "Our repository is available [here!](https://github.com/Kironb/RutgersBot)"
 
     embed = discord.Embed(
-        title='RutgersBot Repository',
+        title="RutgersBot Repository",
         description=desc,
         color=COLOR_RED
     )
     await ctx.send(embed=embed)
 
 
+@client.command()
+async def ping(ctx):
+    str_to_send = "Pong! "
+    if client.latency < 1:
+        str_to_send += "%.2f ms" % (client.latency * 1000)
+    else:
+        str_to_send += "%.2f s" % client.latency
+    await ctx.send(str_to_send)
+
+
 # Function that is run when the Management cog is loaded
 async def perform_management_load():
     # checks if the cog is loaded, and if it is, the instance of that Cog is captured
     # and then the temporarily muted users are loaded into that instance
-    if 'Management' in client.cogs:
+    if "Management" in client.cogs:
         management_cog = client.cogs["Management"]
         await management_cog.load_temp_muted_users()
 
@@ -117,7 +127,7 @@ async def unload(ctx, extension):
     else:
         msg = ""
         try:
-            client.unload_extension(f'cogs.{extension}')
+            client.unload_extension(f"cogs.{extension}")
             msg = "Extension unloaded successfully."
         except ExtensionNotLoaded:
             msg = "Extension failed to unload."
@@ -130,22 +140,22 @@ async def unload(ctx, extension):
 async def reload(ctx, extension):
     user_id = ctx.author.id
     if not is_bot_admin(user_id):
-        await ctx.send('Oops! You can\'t do that.')
+        await ctx.send("Oops! You can\'t do that.")
     else:
-        client.unload_extension(f'cogs.{extension}')
+        client.unload_extension(f"cogs.{extension}")
         client.load_extension(f"cogs.{extension}")
-        await ctx.send('Cog reloaded.')
+        await ctx.send("Cog reloaded.")
         return
 
 
 @client.event
 async def on_ready():
-    await client.change_presence(activity=discord.Game('the Rutgers buses'))
+    await client.change_presence(activity=discord.Game("the Rutgers buses"))
     await perform_management_load()
-    print('Logged in as')
+    print("Logged in as")
     print(client.user.name)
     print(client.user.id)
-    print('------')
+    print("------")
 
 
 class InvalidConfigurationException(Exception):
@@ -165,24 +175,24 @@ def correct_usage_embed(command_name: str, args: dict):
                  color=COLOR_RED)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # sets up signal to be recognized by user
     signal.signal(signal.SIGINT, signal_handler)
 
     loadedHelpData.clear()
     # for every filename in the cogs directory...
-    for filename in os.listdir('./cogs'):
-        if filename.endswith('.py'):
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py"):
             # load the cog
-            client.load_extension(f'cogs.{filename[:-3]}')
+            client.load_extension(f"cogs.{filename[:-3]}")
 
             # What is a cog? A cog is a set of commands that go together, they can be unloaded or loaded using
             # a set of commands
 
             # here we are loading separate help data per cog, in order to deal with changing this core file less
             # and to allow for expandability
-            lib = importlib.import_module(f'cogs.{filename[:-3]}')
-            helpData = getattr(lib, 'help')
+            lib = importlib.import_module(f"cogs.{filename[:-3]}")
+            helpData = getattr(lib, "help")
             currentData = helpData(COMMAND_PREFIX)
             dataToAdd = [currentData[0], currentData[1]]
             loadedHelpData.append(dataToAdd)
