@@ -1,6 +1,4 @@
-import discord
 import pymongo
-from discord import Embed
 from discord.ext import commands
 
 import config
@@ -18,7 +16,7 @@ class Suggestions(commands.Cog):
     @commands.command()
     async def report(self, ctx, report_info=None):
         if report_info is None:
-            await ctx.send(embed=correct_usage_embed("Report", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "report", {
                 "report_info": "Information on the bug to be reported to the developers."}))
             return
 
@@ -32,7 +30,7 @@ class Suggestions(commands.Cog):
     @commands.has_any_role(*config.MODERATOR_ROLES)
     async def criticalreport(self, ctx, report_info=None):
         if report_info is None:
-            await ctx.send(embed=correct_usage_embed("CriticalReport", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "criticalreport", {
                 "report_info": "Information on the bug to be reported to the developers."}))
             return
 
@@ -51,8 +49,8 @@ def setup(client):
     return
 
 
-def help(COMMAND_PREFIX):
+def get_help():
     return ["Suggestions",
-            f"{COMMAND_PREFIX}Report [report_info] (sends a suggestion/bug to the bot developers)\n"
-            f"{COMMAND_PREFIX}CriticalReport [report_info] (sends a critical suggestion/bug to the bot developers, "
-            f"can only be used by mods"]
+            f"`report [report_info]` (sends a suggestion/bug to the bot developers)\n"
+            f"`criticalreport [report_info]` (sends a critical suggestion/bug to the bot developers, "
+            f"can only be used by mods)"]

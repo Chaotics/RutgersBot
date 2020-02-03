@@ -4,6 +4,7 @@ import signal
 import sys
 
 import discord
+import pymongo
 from discord import Embed
 from discord.ext import commands
 from discord.ext.commands import ExtensionNotLoaded, ExtensionAlreadyLoaded
@@ -11,11 +12,27 @@ from discord.ext.commands import ExtensionNotLoaded, ExtensionAlreadyLoaded
 import config
 
 TOKEN = config.LOGIN_TOKEN
-COMMAND_PREFIX = "r!"
+command_prefixes = {}
 COLOR_RED = 0xff1300
-client = commands.Bot(command_prefix=COMMAND_PREFIX, case_insensitive=True)
-client.remove_command("help")
+dbclient = pymongo.MongoClient(config.MONGO_KEY)
 admins = [93121870949281792, 126420592579706880]
+loaded_help_data = [[]]
+
+
+def fetch_command_prefix(guild):
+    global command_prefixes, dbclient
+    if guild.id not in command_prefixes:
+        prefix = dbclient.bot[str(guild.id)].find_one({"prefix": {"$exists": 1}}, {"_id": 0, "prefix": 1})
+        if prefix is not None:
+            command_prefixes[guild.id] = prefix["prefix"]
+        else:
+            command_prefixes[guild.id] = config.DEFAULT_COMMAND_PREFIX
+    print("Current Prefix: " + command_prefixes[guild.id])
+    return command_prefixes[guild.id]
+
+
+client = commands.Bot(command_prefix=lambda bot, msg: fetch_command_prefix(msg.guild), case_insensitive=True)
+client.remove_command("help")
 
 
 # check for bot admins
@@ -31,22 +48,14 @@ def signal_handler(sig, frame):
     sys.exit(0)
 
 
-loadedHelpData = [[]]
-
-
 @client.command()
 async def help(ctx):
-    embed = discord.Embed(title="Help", description="A general list of commands provided", color=COLOR_RED)
-    embed.add_field(name="Basic Commands", value=f"Do {COMMAND_PREFIX}help to see this help screen!\n"
-                                                 "For more information about each command simply attempt\n"
-                                                 "to perform the command with no inputs.\n"
-                                                 f"{COMMAND_PREFIX}repo (provides a link to the open source repository)"
-                    , inline=False)
-
-    embed.add_field(name="Admin Commands",
-                    value=f"{COMMAND_PREFIX}load (loads a set of commands) \n {COMMAND_PREFIX}unload (unloads a set of "
-                          "commands)", inline=False)
-    for data in loadedHelpData:
+    embed = discord.Embed(title="Help",
+                          description=f"A general list of commands provided. Use `{fetch_command_prefix(ctx.guild)}"
+                                      f"[command]`, where `command` is a valid command from below. "
+                                      f"Run it without any inputs to get further details about correct usage",
+                          color=COLOR_RED)
+    for data in loaded_help_data:
         embed.add_field(name=data[0], value=data[1], inline=False)
     user = ctx.author
     try:
@@ -59,16 +68,37 @@ async def help(ctx):
 
 @client.command()
 async def repo(ctx):
-    desc = "Our repository is available [here!](https://github.com/Kironb/RutgersBot)"
+    desc = "Our repository is available [here!](https://github.com/Chaotics/RutgersBot)"
 
     embed = discord.Embed(
-        title="RutgersBot Repository",
-        description=desc,
-        color=COLOR_RED
+            title="RutgersBot Repository",
+            description=desc,
+            color=COLOR_RED
     )
     await ctx.send(embed=embed)
 
 
+@client.command()
+@commands.has_any_role(*config.MODERATOR_ROLES)
+async def changeprefix(ctx, *, new_prefix: str = None):
+    """
+    Method that is used to change the prefix for commands for the bot in a given server
+    :param ctx: context under which the command is called under
+    :param new_prefix: the new prefix for invoking the bot's commands
+    :return: None
+    """
+    if new_prefix is None or not new_prefix:
+        await ctx.send(embed=correct_usage_embed(ctx.guild, "changeprefix", {
+            "new_prefix": "the new non-empty prefix that is desired to be used to invoke the bot's commands. "
+                          "Note: The default prefix is `r!`"
+        }))
+        return
+    command_prefixes[ctx.guild.id] = new_prefix
+    dbclient.bot[str(ctx.guild.id)].update({"prefix": {"$exists": 1}}, {"$set": {"prefix": new_prefix}}, upsert=True)
+    await ctx.send(f"The prefix has successfully been changed to: `{new_prefix}`")
+
+
+# Function that prints the Discord Websocket protocol latency
 @client.command()
 async def ping(ctx):
     str_to_send = "Pong! "
@@ -163,7 +193,7 @@ class InvalidConfigurationException(Exception):
 
 
 # function to display correct usage of a command
-def correct_usage_embed(command_name: str, args: dict):
+def correct_usage_embed(guild: discord.Guild, command_name: str, args: dict):
     arg_list = ""
     for arg_name in args.keys():
         arg_list = arg_list + f"[{arg_name}]"
@@ -171,15 +201,16 @@ def correct_usage_embed(command_name: str, args: dict):
     for arg_name, arg_desc in args.items():
         arg_explanation_str = arg_explanation_str + f"**{arg_name}** = {arg_desc}\n"
     return Embed(title="Incorrect usage",
-                 description=f"**Correct usage**: {COMMAND_PREFIX}{command_name} {arg_list}\n{arg_explanation_str}",
+                 description=f"**Correct usage**: {fetch_command_prefix(guild)}{command_name} {arg_list}\n{arg_explanation_str}",
                  color=COLOR_RED)
 
 
 if __name__ == "__main__":
     # sets up signal to be recognized by user
     signal.signal(signal.SIGINT, signal_handler)
-
-    loadedHelpData.clear()
+    loaded_help_data = [["Admin Commands", "`load` (loads a set of commands\n"
+                                           "`unload` (unloads a set of commands)"],
+                        ["Basic Commands", "`repo` (provides a link to the open source repository)"]]
     # for every filename in the cogs directory...
     for filename in os.listdir("./cogs"):
         if filename.endswith(".py"):
@@ -192,8 +223,8 @@ if __name__ == "__main__":
             # here we are loading separate help data per cog, in order to deal with changing this core file less
             # and to allow for expandability
             lib = importlib.import_module(f"cogs.{filename[:-3]}")
-            helpData = getattr(lib, "help")
-            currentData = helpData(COMMAND_PREFIX)
-            dataToAdd = [currentData[0], currentData[1]]
-            loadedHelpData.append(dataToAdd)
+            help_data = getattr(lib, "get_help")
+            current_data = help_data()
+            data_to_add = [current_data[0], current_data[1]]
+            loaded_help_data.append(data_to_add)
     client.run(TOKEN)

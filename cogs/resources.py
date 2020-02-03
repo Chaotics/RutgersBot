@@ -49,7 +49,6 @@ def setup(client):
     return
 
 
-def help(COMMAND_PREFIX):
-    return ["Resources", f"If available, do {COMMAND_PREFIX}coursename to get useful course resources.\n"
-                         f"Currently only {COMMAND_PREFIX}cs111, {COMMAND_PREFIX}cs112 and {COMMAND_PREFIX}cs214 "
-                         f"are available."]
+def get_help():
+    return ["Resources", f"`coursename` to get useful course resources (if available)\n"
+                         f"Currently only `cs111`, `cs112` and `cs214` are available."]

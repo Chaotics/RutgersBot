@@ -6,12 +6,11 @@ from datetime import datetime, timedelta
 from os import path
 
 import discord
-import pymongo
 from discord import Embed
 from discord.ext import commands
 
 import config
-from turn_on import COLOR_RED, InvalidConfigurationException, correct_usage_embed
+from turn_on import COLOR_RED, InvalidConfigurationException, correct_usage_embed, dbclient
 
 MUTED_USERS_FILE_PATH = "temporarily_muted_users.json"
 
@@ -26,7 +25,7 @@ def is_mute_role_defined():
         if not config.MUTED_ROLE:
             await ctx.send("The muted role is undefined. Please ask your server administrator to define it")
             raise InvalidConfigurationException(
-                "Muted role is undefined. It must be set in order to use the mute related commands")
+                    "Muted role is undefined. It must be set in order to use the mute related commands")
         return True
 
     return commands.check(check)
@@ -107,7 +106,7 @@ class Management(commands.Cog):
         # in-memory dictionary of the temporarily muted users
         self.temp_muted_users = {}
         # mongodb database connection
-        self.dbclient = pymongo.MongoClient(config.MONGO_KEY)
+        self.dbclient = dbclient
         # all the different info types
         self._INFO_TYPES = {"w": "warnings", "b": "bans", "m": "mutes", "u": "unmutes"}
 
@@ -124,7 +123,7 @@ class Management(commands.Cog):
 
         # makes sure none of the required arguments are missing
         if member is None or warning_reason is None:
-            await ctx.send(embed=correct_usage_embed("warn", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "warn", {
                 "user": "a member of the server to warn",
                 "reason": "a brief explanation for why the "
                           "warning was issued"
@@ -143,7 +142,7 @@ class Management(commands.Cog):
                                                             }}}, upsert=True)
         await ctx.send(f"User \"{member.name}\" has successfully been warned")
         await member.send(
-            f"You have received a warning on the server \"{ctx.guild}\" for the following reasoning: {warning_reason}")
+                f"You have received a warning on the server \"{ctx.guild}\" for the following reasoning: {warning_reason}")
 
     async def unmute_user_helper(self, guild, user, end_time, perma_mute=False):
         """
@@ -207,7 +206,7 @@ class Management(commands.Cog):
         """
         # makes sure none of the required arguments are missing
         if member is None or duration is None or mute_reason is None:
-            await ctx.send(embed=correct_usage_embed("mute", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "mute", {
                 "user": "a member of the server to mute",
                 "duration": "a numerical value >= 0, immediately "
                             "followed by h, m or s for hours, minutes "
@@ -221,8 +220,8 @@ class Management(commands.Cog):
         # verifies that the format of the duration string is valid
         if re.match("^\\d+[hms]$", duration) is None:
             await ctx.send(
-                "The provided duration was invalid. It has to be a number >= 0, followed by a character from the "
-                "following: [h]ours, [m]inutes, [s]econds. Note a duration of 0 means permanent mute")
+                    "The provided duration was invalid. It has to be a number >= 0, followed by a character from the "
+                    "following: [h]ours, [m]inutes, [s]econds. Note a duration of 0 means permanent mute")
             return
         # converts the duration to a number and serializes to timedelta
         numerical_duration = int(duration[:-1])
@@ -236,8 +235,8 @@ class Management(commands.Cog):
 
         # checks if the user is already permanently muted
         is_permanently_muted = self.dbclient.bot[str(ctx.guild.id)].find_one(
-            {"_id": member.id, "permanently_muted": True},
-            {"_id": 1}) is not None
+                {"_id": member.id, "permanently_muted": True},
+                {"_id": 1}) is not None
         # if so, the issuer is made aware of this fact
         if is_permanently_muted:
             await ctx.send(f"User \"{member.name}\" is already permanently muted")
@@ -264,7 +263,7 @@ class Management(commands.Cog):
                 # sends messages to the server and the user indicating successful mute
                 await ctx.send(f"User \"{member.name}\" has successfully been muted for {duration}")
                 await member.send(
-                    f"You have been muted for {duration} on the server \"{ctx.guild}\" for the following reason: {mute_reason}")
+                        f"You have been muted for {duration} on the server \"{ctx.guild}\" for the following reason: {mute_reason}")
             # otherwise, its a permanent mute
             else:
                 # assigns the muted role to the user and if the user was temporarily muted, removes them from
@@ -279,7 +278,7 @@ class Management(commands.Cog):
                 # sends messages to the server and the user indicating a successful permanent mute
                 await ctx.send(f"User \"{member.name}\" has successfully been muted permanently")
                 await member.send(
-                    f"You have been permanently muted on the server \"{ctx.guild}\" for the following reason: {mute_reason}")
+                        f"You have been permanently muted on the server \"{ctx.guild}\" for the following reason: {mute_reason}")
         # writes the issued mute data to the database to serve as a log
         self.dbclient.bot[str(ctx.guild.id)].update({"_id": member.id},
                                                     {"$push": {
@@ -306,7 +305,7 @@ class Management(commands.Cog):
         """
         # makes sure that the required arguments are given
         if member is None:
-            await ctx.send(embed=correct_usage_embed("unmute", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "unmute", {
                 "user": "a member of the server to unmute"
             }))
             return
@@ -314,8 +313,8 @@ class Management(commands.Cog):
         if await self.unmute_user_helper(ctx.guild, member, 0, True) or \
                 await remove_muted_role(ctx.guild, member):
             self.dbclient.bot[str(ctx.guild.id)].find_one_and_update(
-                {"_id": member.id, "permanently_muted": {"$exists": True}},
-                {"$set": {"permanently_muted": False}})
+                    {"_id": member.id, "permanently_muted": {"$exists": True}},
+                    {"$set": {"permanently_muted": False}})
         else:
             await ctx.send(f"User \"{member.name}\" isn't currently muted")
 
@@ -332,7 +331,7 @@ class Management(commands.Cog):
         # makes sure that the required arguments are given and the values are expected
         if member is None or delete_days is None or not delete_days.isnumeric() or not (
                 0 <= int(delete_days) <= 7) or ban_reason is None:
-            await ctx.send(embed=correct_usage_embed("ban", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "ban", {
                 "user": "a member of the server to ban",
                 "delete_days": "number of days worth of messages to delete from the user (from 0-7 inclusive)",
                 "reason": "the reason for which the user is getting banned"
@@ -374,7 +373,7 @@ class Management(commands.Cog):
         """
         # ensures that the required parameters are passed in
         if member_id is None or not member_id.isnumeric() or unban_reason is None:
-            await ctx.send(embed=correct_usage_embed("unban", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "unban", {
                 "user_id": "the id of the user to unban",
                 "reason": "the reason for which the user is being unbanned"
             }))
@@ -411,7 +410,7 @@ class Management(commands.Cog):
         # communicates the unban to the user and the reason for it
         try:
             await user.send(
-                f"You have been unbanned from the server \"{ctx.guild}\" for the following reasoning: {unban_reason}")
+                    f"You have been unbanned from the server \"{ctx.guild}\" for the following reasoning: {unban_reason}")
         except Exception:
             pass
 
@@ -429,7 +428,7 @@ class Management(commands.Cog):
         if info_type is None or (
                 info_type not in self._INFO_TYPES.keys() and info_type not in self._INFO_TYPES.values()) \
                 or mod_id is None or not mod_id.isnumeric():
-            await ctx.send(embed=correct_usage_embed("modinfo", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "modinfo", {
                 "info_type": "the type of information you want; must be one of [w]arnings, [m]utes, [b]ans, [u]nbans",
                 "mod_id": "the id of the mod for which you want to get the info about"
             }))
@@ -476,7 +475,7 @@ class Management(commands.Cog):
         if info_type is None or (
                 info_type not in self._INFO_TYPES.keys() and info_type not in self._INFO_TYPES.values()) \
                 or member_id is None or not member_id.isnumeric():
-            await ctx.send(embed=correct_usage_embed("info", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "info", {
                 "info_type": "the type of information you want;  must be one of [w]arnings, [m]utes, [b]ans, [u]nbans",
                 "member_id": "the id for the member you want to know about"
             }))
@@ -508,9 +507,13 @@ def setup(client):
     return
 
 
-def help(COMMAND_PREFIX):
+def get_help():
     return ["Management Commands",
-            f"{COMMAND_PREFIX}Warn [user] [reason]\n{COMMAND_PREFIX}Mute [user] [duration] [reason]\n"
-            f"{COMMAND_PREFIX}Unmute [user]\n{COMMAND_PREFIX}Ban [user] [delete_days] [reason]\n"
-            f"{COMMAND_PREFIX}Unban [user_id] [reason]\n{COMMAND_PREFIX}Info [info_type] [user]\n"
-            f"{COMMAND_PREFIX}ModInfo [info_type] [user]"]
+            f"`warn [user] [reason]` (warns a user for the given reason)\n"
+            f"`mute [user] [duration] [reason]` (mutes a user for the given duration and reason)\n"
+            f"`unmute [user]` (unmutes a user)\n"
+            f"`ban [user] [delete_days] [reason]` (bans user for given reason & deletes their messages for said days)\n"
+            f"`unban [user_id] [reason]` (unbans a user for the given reason)\n"
+            f"`info [info_type] [user]` (gets moderation information of specified type for the given user)\n"
+            f"`modinfo [info_type] [user]` (gets moderation information of specified type for the given moderator)\n"
+            f"`changeprefix [new_prefix]` (changes the bot invocation prefix to the one specified)"]

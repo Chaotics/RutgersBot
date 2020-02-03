@@ -137,6 +137,6 @@ def setup(client):
     return
 
 
-def help(COMMAND_PREFIX):
-    return ["Dining Commands", f"{COMMAND_PREFIX}Takeout (gives the times takeout is open) \n {COMMAND_PREFIX}"
-                               f"DineIn (gives the times the dining hall is open)"]
+def get_help():
+    return ["Dining Commands", f"`takeout` (gives the times takeout is open)\n"
+                               f"`dinein` (gives the times the dining hall is open)"]

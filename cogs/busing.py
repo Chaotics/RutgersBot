@@ -7,7 +7,7 @@ from discord.ext import commands
 from api_utils import create_api_url, params_append_coords, API_REQUEST_HEADERS, API_AGENCIES, CAMPUS_FULL_NAMES, \
     attach_api_error, params_append_stop_and_route, convert_api_datetime, is_data_stale
 from data_utils import find_by_api_id, BusingDataType, find_bus_data
-from turn_on import COLOR_RED, correct_usage_embed, COMMAND_PREFIX
+from turn_on import COLOR_RED, correct_usage_embed
 
 
 class Busing(commands.Cog):
@@ -43,7 +43,7 @@ class Busing(commands.Cog):
         # starts by first checking if the campus value provided is valid
         if campus not in Busing._VALID_CAMPUSES_FOR_STOPS:
             # if the provided campus is invalid, an error is sent back
-            await ctx.send(embed=correct_usage_embed("stops", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "stops", {
                 "campus": f"it has to be one of {Busing._VALID_CAMPUSES_FOR_STOPS}\n"
                           "nk = Newark\n"
                           "cm = Camden\n"
@@ -101,7 +101,7 @@ class Busing(commands.Cog):
         # the campus is validated
         if campus not in Busing._VALID_CAMPUSES_FOR_ROUTES:
             # if its invalid, a list of valid campuses to retrieve routes is attached to the embed
-            await ctx.send(embed=correct_usage_embed("routes", {
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "routes", {
                 "campus": f"it has to be one of {Busing._VALID_CAMPUSES_FOR_ROUTES}\n"
                           "nk = Newark\n"
                           "cm = Camden\n"
@@ -156,17 +156,17 @@ class Busing(commands.Cog):
         # validates the input stop string passed
         stop_data = find_bus_data(BusingDataType.STOP, stop)
         if stop_data is None:
-            await ctx.send(embed=correct_usage_embed("bus", {
-                "stop": f"a valid Rutgers stop, fetched from {COMMAND_PREFIX}stops [campus]",
-                "route": f"a valid Rutgers route, fetched from {COMMAND_PREFIX}routes [campus]"
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "bus", {
+                "stop": f"a valid Rutgers stop, fetched using the command `stops [campus]`",
+                "route": f"a valid Rutgers route, fetched using the command `routes [campus]`"
             }))
             return
         # validates the input route string passed
         route_data = find_bus_data(BusingDataType.ROUTE, route)
         if route_data is None:
-            await ctx.send(embed=correct_usage_embed("bus", {
-                "stop": f"a valid Rutgers stop, fetched from {COMMAND_PREFIX}stops [campus]",
-                "route": f"a valid Rutgers route, fetched from {COMMAND_PREFIX}routes [campus]"
+            await ctx.send(embed=correct_usage_embed(ctx.guild, "bus", {
+                "stop": f"a valid Rutgers stop, fetched using the commmand `stops [campus]`",
+                "route": f"a valid Rutgers route, fetched using the command `routes [campus]`"
             }))
             return
         search_str = f"{stop_data.internal_id}{route_data.internal_id}"
@@ -223,7 +223,7 @@ def setup(client):
     return
 
 
-def help(COMMAND_PREFIX):
-    return ["Busing Commands", f"{COMMAND_PREFIX}Routes [school] (gives available routes)\n"
-                               f"{COMMAND_PREFIX}Stops [campus] (gives available stops)\n"
-                               f"{COMMAND_PREFIX}Bus [stop] [route] (gives estimated arrival time) "]
+def get_help():
+    return ["Busing Commands", f"`routes [school]` (gives available routes)\n"
+                               f"`stops [campus]` (gives available stops)\n"
+                               f"`bus [stop] [route]` (gives estimated arrival time)"]

@@ -27,5 +27,5 @@ def setup(client):
     return
 
 
-def help(COMMAND_PREFIX):
-    return ["Cave Commands", f"{COMMAND_PREFIX}Cave (gives the times the cave is open)"]
+def get_help():
+    return ["Cave Commands", f"`cave` (gives the times the cave is open)"]
