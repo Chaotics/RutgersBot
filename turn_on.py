@@ -27,7 +27,6 @@ def fetch_command_prefix(guild):
             command_prefixes[guild.id] = prefix["prefix"]
         else:
             command_prefixes[guild.id] = config.DEFAULT_COMMAND_PREFIX
-    print("Current Prefix: " + command_prefixes[guild.id])
     return command_prefixes[guild.id]
 
 
