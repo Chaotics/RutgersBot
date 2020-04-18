@@ -8,6 +8,7 @@ A rutgers bot for the CS Discord!
     * [Running](#running)
     * [Closing](#closing)
 * [Command Information](#command-information)
+* [Invitations](#invitations)
 
 ##  Abstract
 This application serves as the Rutgers discord bot that is currently running on the Computer Science discord. Details on the commands it provides for users can be looked up in the Wiki section of the github page. It provides tools for moderation, information on bus arrival time and more.
@@ -50,3 +51,10 @@ To do this, press CTRL + C on the terminal you are currently running it on or ru
 
 ## Command Information
 Command information for the bot can be located at the wiki section of the repo.
+
+## Invitations
+To add me to your own discord server simply go to the following link:
+https://discordapp.com/api/oauth2/authorize?client_id=616271884497190952&permissions=518208&scope=bot
+
+The muting and banning functionality only works with certain roles as admins and certain roles designated for muting.
+
